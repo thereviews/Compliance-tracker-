@@ -22,8 +22,8 @@
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
-    "postcss": "^8.5.29",
-    "tailwindcss": "^4.3.3"
+    "@tailwindcss/postcss": "^4.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^4.0.0"
   }
 }
