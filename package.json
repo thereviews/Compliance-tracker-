@@ -21,6 +21,9 @@
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.4"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^4.3.3"
+  }
 }
-
