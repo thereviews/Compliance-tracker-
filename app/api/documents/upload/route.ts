@@ -92,8 +92,16 @@ export async function POST(req: Request) {
     if (docError) throw new Error(`Document DB insert failed: ${docError.message}`);
 
     return NextResponse.json({ success: true, data: newDocument });
-  } catch (error: any) {
     return NextResponse.json({ error: 'Upload failed', details: error.message }, { status: 500 });
+  }  }   } catch (error: any) {
+    console.error('DOCUMENT UPLOAD ERROR:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Upload failed',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
   }
-}
 
