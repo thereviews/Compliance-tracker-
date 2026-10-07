@@ -81,14 +81,6 @@ const res = await fetch('/api/documents/upload', {
   method: 'POST',
   headers,
   body: formData,
-});const headers = await getAuthHeaders();
-
-delete headers['Content-Type'];
-
-const res = await fetch('/api/documents/upload', {
-  method: 'POST',
-  headers,
-  body: formData,
 });
 
       const json = await res.json();
