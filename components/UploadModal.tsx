@@ -86,9 +86,11 @@ export function UploadModal({
 
       const json = await res.json();
 
-      if (!res.ok) {
         throw new Error(json.error || 'Upload failed');
-      }
+}
+if (!res.ok) {
+  throw new Error(json.details || json.error || 'Upload failed');
+}
 
       setExtractedData(json.data);
       setStep('extracted');
