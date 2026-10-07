@@ -1,7 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+const key = process.env.GEMINI_API_KEY;
+
+console.log("GEMINI KEY CHECK:", {
+  exists: !!key,
+  startsWithAQ: key?.startsWith("AQ."),
+  length: key?.length,
+});
+
 export const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY!,
+  apiKey: key!,
 });
 
 export const documentExtractionSchema = {
