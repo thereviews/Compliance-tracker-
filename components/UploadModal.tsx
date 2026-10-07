@@ -84,33 +84,22 @@ export function UploadModal({
         body: formData,
       });
 
-      
-throw new Error(json.error || 'Upload failed');
-}
-if (!res.ok) {
-  throw new Error(json.details || json.error || 'Upload failed');
+      const json = await res.json();
 
-throw new Error(json.error || 'Upload failed');
-}
-if (!res.ok) {
-  throw new Error(json.details || json.error || 'Upload failed');
-}
-if (!res.ok) {
-  throw new Error(
-    json.details || json.error || 'Upload failed'
-  );
-}const json = await res.json();
-
-if (!res.ok) {
-  throw new Error(
-    json.details || json.error || 'Upload failed'
-  );
-}
+      if (!res.ok) {
+        throw new Error(
+          json.details || json.error || 'Upload failed'
+        );
+      }
 
       setExtractedData(json.data);
       setStep('extracted');
 
       toast.success(
+        'Document successfully analyzed & indexed!'
+      );
+
+toast.success(
         'Document successfully analyzed & indexed!'
       );
     } catch (error: any) {
