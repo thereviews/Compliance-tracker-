@@ -75,9 +75,7 @@ export function UploadModal({
         formData.append('newVendorName', newVendorName);
       }
 
-
-const res = await fetch('/api/documents/upload', {
-            } else if (vendorMode === 'new' && newVendorName) {
+if (vendorMode === 'new' && newVendorName) {
         formData.append('newVendorName', newVendorName);
       }
 
