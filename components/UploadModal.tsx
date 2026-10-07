@@ -72,16 +72,24 @@ export function UploadModal({
 
       if (vendorMode === 'existing' && selectedVendorId) {
         formData.append('vendorId', selectedVendorId);
-      } else if (vendorMode === 'new' && newVendorName) {
         formData.append('newVendorName', newVendorName);
       }
 
 
 const res = await fetch('/api/documents/upload', {
-  method: 'POST',
-  headers,
-  body: formData,
-});
+            } else if (vendorMode === 'new' && newVendorName) {
+        formData.append('newVendorName', newVendorName);
+      }
+
+      const headers = await getAuthHeaders();
+
+      delete headers['Content-Type'];
+
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
 
       const json = await res.json();
 
@@ -95,10 +103,6 @@ const res = await fetch('/api/documents/upload', {
       setStep('extracted');
 
       toast.success(
-        'Document successfully analyzed & indexed!'
-      );
-
-toast.success(
         'Document successfully analyzed & indexed!'
       );
     } catch (error: any) {
