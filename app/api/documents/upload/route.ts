@@ -101,7 +101,19 @@ export async function POST(req: Request) {
       ],
       config: {
         systemInstruction:
-          'You are a backend legal and procurement document parser. Extract structured compliance metadata from this PDF. Return strictly valid JSON.',
+  `You are a backend legal and procurement document parser.
+
+Extract structured compliance metadata from this PDF.
+
+IMPORTANT:
+- vendor_name MUST be the legal company/entity identified as the VENDOR or SERVICE PROVIDER in the agreement.
+- Do NOT use the CLIENT name as vendor_name.
+- Do NOT use a person's name.
+- Copy the vendor's legal company name exactly as written in the document.
+- document_type should identify the type of agreement.
+- effective_date and expiration_date must use YYYY-MM-DD.
+- financial_value should be the total contract value when it can be determined from the document.
+- Return strictly valid JSON matching the provided schema.`,
         responseMimeType: 'application/json',
         responseSchema: documentExtractionSchema,
       },
@@ -111,6 +123,10 @@ export async function POST(req: Request) {
     step = 'parsing Gemini response';
 
     const extraction = JSON.parse(response.text);
+    console.log(
+     'GEMINI EXTRACTION:',
+      JSON.stringify(extraction, null, 2)
+);
 
     // 8. Vendor handling
     step = 'processing vendor';
