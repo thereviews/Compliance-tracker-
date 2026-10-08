@@ -1,6 +1,3 @@
-import { NextResponse } from 'next/server';
-import { getAuthClient } from '@/lib/supabase';
-
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -25,6 +22,32 @@ export async function PUT(
     const { id } = await params;
 
     const body = await req.json();
+
+    // Recalculate status when an expiration date is provided
+    if (body.expiration_date) {
+      const today = new Date();
+      const expirationDate = new Date(body.expiration_date);
+
+      const todayStr = today.toISOString().split('T')[0];
+
+      const thirtyDaysFromNow = new Date(today);
+      thirtyDaysFromNow.setDate(
+        thirtyDaysFromNow.getDate() + 30
+      );
+
+      const thirtyDaysStr =
+        thirtyDaysFromNow.toISOString().split('T')[0];
+
+      const expirationStr = body.expiration_date;
+
+      if (expirationStr < todayStr) {
+        body.status = 'Expired';
+      } else if (expirationStr <= thirtyDaysStr) {
+        body.status = 'Expiring Soon';
+      } else {
+        body.status = 'Active';
+      }
+    }
 
     const { error, data } = await supabase
       .from('compliance_documents')
