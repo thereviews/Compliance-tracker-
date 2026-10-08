@@ -110,7 +110,7 @@ export async function POST(req: Request) {
     // 7. Parse Gemini result
     step = 'parsing Gemini response';
 
-    const extraction = JSON.parse(response.text());
+    const extraction = JSON.parse(response.text);
 
     // 8. Vendor handling
     step = 'processing vendor';
