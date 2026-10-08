@@ -82,7 +82,7 @@ export async function POST(req: Request) {
     step = 'calling Gemini';
 
     const response = await ai.models.generateContent({
-      model: 'model: 'gemini-3.5-flash',
+    model: 'gemini-3.5-flash',
       contents: [
         {
           role: 'user',
