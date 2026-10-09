@@ -1,90 +1,76 @@
-import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET;
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('authorization');
 
   if (
-    !secret ||
-    req.headers.get('Authorization') !== `Bearer ${secret}`
+    !process.env.CRON_SECRET ||
+    authHeader !== `Bearer ${process.env.CRON_SECRET}`
   ) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
+    return Response.json(
+      { success: false, error: 'Unauthorized' },
       { status: 401 }
     );
   }
 
   const apiKey = process.env.RESEND_API_KEY;
+  const recipient = process.env.EXPIRATION_TEST_EMAIL;
 
   if (!apiKey) {
-    return NextResponse.json(
-      { error: 'RESEND_API_KEY is missing' },
+    return Response.json(
+      { success: false, error: 'RESEND_API_KEY is missing' },
       { status: 500 }
     );
   }
 
-  const resend = new Resend(apiKey);
+  if (!recipient) {
+    return Response.json(
+      { success: false, error: 'EXPIRATION_TEST_EMAIL is missing' },
+      { status: 500 }
+    );
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+    return Response.json(
+      { success: false, error: 'Test recipient has an invalid format' },
+      { status: 400 }
+    );
+  }
+
+  console.log('Test recipient configured:', Boolean(recipient));
+  console.log('Test recipient format valid:', true);
 
   try {
-      from: 'onboarding@resend.dev',
-  console.log(
-    'Test recipient configured:',
-    Boolean(process.env.EXPIRATION_TEST_EMAIL),
-    'Recipient matches expected format:',
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-      process.env.EXPIRATION_TEST_EMAIL || ''
-    )
-  ),
-  to: process.env.EXPIRATION_TEST_EMAIL!,  from: 'onboarding@resend.dev',
-  console.log(
-    'Test recipient configured:',
-    Boolean(process.env.EXPIRATION_TEST_EMAIL),
-    'Recipient matches expected format:',
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-      process.env.EXPIRATION_TEST_EMAIL || ''
-    )
-  ),
-  to: process.env.EXPIRATION_TEST_EMAIL!,const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev',
-     console.log(
-        'Test recipient configured:',
-    Boolean(process.env.EXPIRATION_TEST_EMAIL),
-        'Recipient matches expected 
-format:',
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    process.env.EXPIRATION_TEST_EMAIL || ''
-  )
-);
+    const resend = new Resend(apiKey);
 
-      to: process.env.EXPIRATION_TEST_EMAIL!,
+    const { data, error } = await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to: recipient,
       subject: 'Compliance Tracker email test',
       html: '<p>Your Compliance Tracker email integration is working.</p>',
     });
 
     if (error) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-        },
+      console.error('Resend test email failed:', error);
+
+      return Response.json(
+        { success: false, error: error.message },
         { status: 400 }
       );
     }
 
-    return NextResponse.json({
+    return Response.json({
       success: true,
       message: 'Resend accepted the test email.',
       id: data?.id,
     });
-  } catch (error: unknown) {
-    return NextResponse.json(
+  } catch (error) {
+    console.error('Email test failed:', error);
+
+    return Response.json(
       {
         success: false,
-        error: error instanceof Error
-          ? error.message
-          : String(error),
+        error: error instanceof Error ? error.message : 'Unknown email error',
       },
       { status: 500 }
     );
