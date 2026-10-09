@@ -28,9 +28,27 @@ export async function GET(req: Request) {
   const resend = new Resend(apiKey);
 
   try {
-    const { data, error } = await resend.emails.send({
       from: 'onboarding@resend.dev',
-      console.log(
+  console.log(
+    'Test recipient configured:',
+    Boolean(process.env.EXPIRATION_TEST_EMAIL),
+    'Recipient matches expected format:',
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      process.env.EXPIRATION_TEST_EMAIL || ''
+    )
+  ),
+  to: process.env.EXPIRATION_TEST_EMAIL!,  from: 'onboarding@resend.dev',
+  console.log(
+    'Test recipient configured:',
+    Boolean(process.env.EXPIRATION_TEST_EMAIL),
+    'Recipient matches expected format:',
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      process.env.EXPIRATION_TEST_EMAIL || ''
+    )
+  ),
+  to: process.env.EXPIRATION_TEST_EMAIL!,const { data, error } = await resend.emails.send({
+      from: 'onboarding@resend.dev',
+     console.log(
         'Test recipient configured:',
     Boolean(process.env.EXPIRATION_TEST_EMAIL),
         'Recipient matches expected 
