@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -25,15 +25,15 @@ function dateString(date: Date) {
 export async function GET(req: Request) {
   try {
     const cronSecret = process.env.CRON_SECRET;
-    const resendKey = process.env.RESEND_API_KEY;
-    const fromEmail =
-      process.env.EXPIRATION_FROM_EMAIL ||
-      'onboarding@resend.dev';
+    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const smtpPort = Number(process.env.SMTP_PORT || 465);
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const fromEmail = process.env.EXPIRATION_FROM_EMAIL;
 
     if (
       !cronSecret ||
-      req.headers.get('Authorization') !==
-        `Bearer ${cronSecret}`
+      req.headers.get('Authorization') !== `Bearer ${cronSecret}`
     ) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -41,11 +41,28 @@ export async function GET(req: Request) {
       );
     }
 
-    if (!resendKey) {
-      throw new Error('RESEND_API_KEY is not configured');
+    if (!smtpUser || !smtpPass || !fromEmail) {
+      throw new Error(
+        'SMTP_USER, SMTP_PASS, and EXPIRATION_FROM_EMAIL must be configured'
+      );
     }
 
-    const resend = new Resend(resendKey);
+    if (![465, 587].includes(smtpPort)) {
+      throw new Error('SMTP_PORT must be 465 or 587');
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
+    });
 
     // Use UTC consistently for the daily expiration check.
     const today = new Date();
@@ -96,9 +113,7 @@ export async function GET(req: Request) {
     const { data: documents, error: documentsError } =
       await supabaseAdmin
         .from('compliance_documents')
-        .select(
-          'id, user_id, expiration_date, vendors!inner(name)'
-        )
+        .select('id, user_id, expiration_date, vendors!inner(name)')
         .gte('expiration_date', todayStr)
         .lte('expiration_date', thirtyDaysStr);
 
@@ -225,10 +240,23 @@ export async function GET(req: Request) {
             }, on ${formattedExpiration}. Please review it and take any necessary action.`;
 
       try {
-        const { error: emailError } = await resend.emails.send({
-          from: fromEmail,
+        await transporter.sendMail({
+          from: {
+            name: 'Compliance Tracker',
+            address: fromEmail,
+          },
           to: recipient,
           subject,
+          text: `Hello,
+
+${message}
+
+Vendor: ${vendorLabel}
+Expiration date: ${formattedExpiration}
+
+Please sign in to your Compliance Tracker account to review this document.
+
+— Compliance Tracker`,
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222;">
               <h2>Compliance Tracker — Expiration Reminder</h2>
@@ -243,10 +271,6 @@ export async function GET(req: Request) {
             </div>
           `,
         });
-
-        if (emailError) {
-          throw new Error(emailError.message);
-        }
 
         const { error: sentUpdateError } = await supabaseAdmin
           .from('expiration_notifications')
