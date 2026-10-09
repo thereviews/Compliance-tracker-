@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await resend.emails.send({
       from: 'onboarding@resend.dev',
-      to: recipient,
+      to: 'delivered@resend.dev',
       subject: 'Compliance Tracker email test',
       html: '<p>Your Compliance Tracker email integration is working.</p>',
     });
