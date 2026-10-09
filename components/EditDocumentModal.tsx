@@ -22,7 +22,6 @@ export function EditDocumentModal({ document, isOpen, onClose, onSuccess }: Edit
     notice_period_days: '',
     financial_value: '',
     compliance_summary: '',
-    status: 'Active',
   });
 
   useEffect(() => {
@@ -35,7 +34,6 @@ export function EditDocumentModal({ document, isOpen, onClose, onSuccess }: Edit
         notice_period_days: document.notice_period_days || '',
         financial_value: document.financial_value || '',
         compliance_summary: document.compliance_summary || '',
-        status: document.status || 'Active',
       });
     }
   }, [document]);
@@ -77,7 +75,17 @@ export function EditDocumentModal({ document, isOpen, onClose, onSuccess }: Edit
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           <div className="grid grid-cols-2 gap-4">
-            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">Status</label>
+  <select
+    value={form.status}
+    onChange={(e) => setForm({ ...form, status: e.target.value })}
+    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-100"
+  >
+    <option value="Active">Active</option>
+    <option value="Expiring Soon">Expiring Soon</option>
+    <option value="Expired">Expired</option>
+  </select>
+</div><div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">Document Type</label>
               <input
                 type="text"
@@ -86,19 +94,7 @@ export function EditDocumentModal({ document, isOpen, onClose, onSuccess }: Edit
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-100"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">Status</label>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-100"
-              >
-                <option value="Active">Active</option>
-                <option value="Expiring Soon">Expiring Soon</option>
-                <option value="Expired">Expired</option>
-              </select>
-            </div>
-          </div>
+           
 
           <div className="grid grid-cols-2 gap-4">
             <div>
