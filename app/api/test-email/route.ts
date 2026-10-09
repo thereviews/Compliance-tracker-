@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   try {
     const { data, error } = await resend.emails.send({
       from: 'onboarding@resend.dev',
-      to: 'process.env.EXPIRATION_TEST_EMAIL!,',
+      to: process.env.EXPIRATION_TEST_EMAIL!,
       subject: 'Compliance Tracker email test',
       html: '<p>Your Compliance Tracker email integration is working.</p>',
     });
