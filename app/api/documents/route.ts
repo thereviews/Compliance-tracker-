@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getAuthClient } from '@/lib/supabase';
+import { getPersonalWorkspaceId } from '@/lib/workspaces';
 
 export async function GET(req: Request) {
   try {
-    const supabase = getAuthClient(
-      req.headers.get('Authorization')
-    );
+    const authHeader = req.headers.get('Authorization');
+    const supabase = getAuthClient(authHeader);
 
+    // 1. Authenticate the user.
     const {
       data: { user },
       error: authError,
@@ -19,13 +20,22 @@ export async function GET(req: Request) {
       );
     }
 
+    // 2. Resolve the user's personal workspace.
+    const workspaceId = await getPersonalWorkspaceId(
+      authHeader,
+      user.id
+    );
+
+    // 3. Read search parameters.
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search');
 
+    // 4. Fetch documents belonging to this user and workspace.
     let query = supabase
       .from('compliance_documents')
       .select('*, vendors!inner(name)')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('workspace_id', workspaceId);
 
     if (search) {
       query = query.ilike(
@@ -34,12 +44,10 @@ export async function GET(req: Request) {
       );
     }
 
-    const {
-      data,
-      error,
-    } = await query.order('created_at', {
-      ascending: false,
-    });
+    const { data, error } = await query.order(
+      'created_at',
+      { ascending: false }
+    );
 
     if (error) {
       throw new Error(error.message);
@@ -55,10 +63,7 @@ export async function GET(req: Request) {
         ? error.message
         : String(error);
 
-    console.error(
-      'DOCUMENTS FETCH ERROR:',
-      message
-    );
+    console.error('DOCUMENTS FETCH ERROR:', message);
 
     return NextResponse.json(
       {

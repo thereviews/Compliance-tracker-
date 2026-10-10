@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthClient } from '@/lib/supabase';
 import { ai, documentExtractionSchema } from '@/lib/gemini';
+import { getPersonalWorkspaceId } from '@/lib/workspaces';
 
 export async function POST(req: Request) {
   let step = 'starting';
@@ -29,7 +30,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Read form data
+    // 2. Resolve the authenticated user's personal workspace.
+    step = 'resolving personal workspace';
+
+    const workspaceId = await getPersonalWorkspaceId(
+      req.headers.get('Authorization'),
+      user.id
+    );
+
+    // 3. Read form data
     step = 'reading form data';
 
     const formData = await req.formData();
@@ -131,6 +140,31 @@ IMPORTANT:
     // 8. Vendor handling
     step = 'processing vendor';
 
+    // Verify that a supplied vendor belongs to this user and workspace.
+    if (vendorId) {
+      const { data: selectedVendor, error: selectedVendorError } =
+        await supabase
+          .from('vendors')
+          .select('id')
+          .eq('id', vendorId)
+          .eq('user_id', user.id)
+          .eq('workspace_id', workspaceId)
+          .maybeSingle();
+
+      if (selectedVendorError) {
+        throw new Error(
+          `Vendor validation failed: ${selectedVendorError.message}`
+        );
+      }
+
+      if (!selectedVendor) {
+        return NextResponse.json(
+          { error: 'Vendor not found in your personal workspace' },
+          { status: 403 }
+        );
+      }
+    }
+
     if (!vendorId) {
       const vName =
         newVendorName ||
@@ -143,7 +177,8 @@ IMPORTANT:
           .select('id')
           .eq('name', vName)
           .eq('user_id', user.id)
-          .single();
+          .eq('workspace_id', workspaceId)
+          .maybeSingle();
 
       if (existingVendor) {
         vendorId = existingVendor.id;
@@ -163,6 +198,7 @@ IMPORTANT:
           .insert({
             name: vName,
             user_id: user.id,
+            workspace_id: workspaceId,
           })
           .select('id')
           .single();
@@ -187,6 +223,7 @@ IMPORTANT:
       .from('compliance_documents')
       .insert({
         user_id: user.id,
+        workspace_id: workspaceId,
         vendor_id: vendorId,
         file_path: filePath,
         document_type: extraction.document_type,
