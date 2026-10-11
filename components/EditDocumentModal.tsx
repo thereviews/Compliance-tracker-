@@ -12,9 +12,9 @@ interface EditModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
-
 export function EditDocumentModal({ document, isOpen, onClose, onSuccess }: EditModalProps) {
   const [form, setForm] = useState({
+    status: 'Active',
     document_type: '',
     effective_date: '',
     expiration_date: '',
@@ -27,6 +27,7 @@ export function EditDocumentModal({ document, isOpen, onClose, onSuccess }: Edit
   useEffect(() => {
     if (document) {
       setForm({
+        status: document.status || 'Active',
         document_type: document.document_type || '',
         effective_date: document.effective_date || '',
         expiration_date: document.expiration_date || '',
@@ -94,7 +95,7 @@ export function EditDocumentModal({ document, isOpen, onClose, onSuccess }: Edit
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-100"
               />
             </div>
-           
+
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -169,4 +170,3 @@ export function EditDocumentModal({ document, isOpen, onClose, onSuccess }: Edit
     </div>
   );
 }
-

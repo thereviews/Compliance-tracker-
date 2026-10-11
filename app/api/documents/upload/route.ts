@@ -131,11 +131,13 @@ IMPORTANT:
     // 7. Parse Gemini result
     step = 'parsing Gemini response';
 
-    const extraction = JSON.parse(response.text);
-    console.log(
-     'GEMINI EXTRACTION:',
-      JSON.stringify(extraction, null, 2)
-);
+    const responseText = response.text;
+
+    if (!responseText) {
+      throw new Error('Gemini returned an empty response');
+    }
+
+    const extraction = JSON.parse(responseText);
 
     // 8. Vendor handling
     step = 'processing vendor';

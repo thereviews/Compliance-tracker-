@@ -79,13 +79,14 @@ if (vendorMode === 'new' && newVendorName) {
         formData.append('newVendorName', newVendorName);
       }
 
-      const headers = await getAuthHeaders();
 
-      delete headers['Content-Type'];
+      const authHeaders = await getAuthHeaders();
 
       const res = await fetch('/api/documents/upload', {
         method: 'POST',
-        headers,
+        headers: {
+          Authorization: authHeaders.Authorization,
+        },
         body: formData,
       });
 

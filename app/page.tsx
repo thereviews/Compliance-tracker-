@@ -8,6 +8,8 @@ import {
 } from '@/lib/supabase-client';
 import {
   ShieldCheck,
+  Building2,
+  X,
   Plus,
   Search,
   LogOut,
@@ -28,6 +30,12 @@ export default function DashboardPage() {
   const [editingDoc, setEditingDoc] = useState<any>(null);
   const [userEmail, setUserEmail] = useState('');
   const [authLoading, setAuthLoading] = useState(true);
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('');
+  const [companyModalOpen, setCompanyModalOpen] = useState(false);
+  const [companyName, setCompanyName] = useState('');
+  const [creatingCompany, setCreatingCompany] = useState(false);
 
   const router = useRouter();
 
@@ -38,10 +46,10 @@ export default function DashboardPage() {
 
   // Fetch documents after authentication
   useEffect(() => {
-    if (userEmail) {
+    if (userEmail && selectedWorkspaceId) {
       fetchDocuments();
     }
-  }, [userEmail, statusFilter, search]);
+  }, [userEmail, selectedWorkspaceId, statusFilter, search]);
 
   const checkUser = async () => {
     try {
@@ -59,6 +67,116 @@ export default function DashboardPage() {
       setAuthLoading(false);
     } catch (err) {
       router.push('/login');
+    }
+  };
+
+  // Fetch the workspaces the current user belongs to.
+  useEffect(() => {
+    if (userEmail) {
+      fetchWorkspaces();
+    }
+  }, [userEmail]);
+
+  const handleWorkspaceChange = (workspaceId: string) => {
+    const workspace = workspaces.find(
+      (item: any) => item.id === workspaceId
+    );
+
+    if (!workspace) return;
+
+    setSelectedWorkspaceId(workspaceId);
+    localStorage.setItem(`selectedWorkspace:${userEmail}`, workspaceId);
+
+    setIsUploadOpen(false);
+    setEditingDoc(null);
+
+    if (workspace.type === 'company') {
+      setDocuments([]);
+      toast.info(
+        'Company document sharing is not enabled yet.'
+      );
+    }
+  };
+
+  const fetchWorkspaces = async () => {
+    setWorkspaceLoading(true);
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/workspaces', { headers });
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          json.error || 'Failed to load workspaces'
+        );
+      }
+
+      const loadedWorkspaces = json.workspaces || [];
+      setWorkspaces(loadedWorkspaces);
+
+      const storageKey = `selectedWorkspace:${userEmail}`;
+      const savedWorkspaceId = localStorage.getItem(storageKey);
+
+      const savedWorkspace = loadedWorkspaces.find(
+        (workspace: any) => workspace.id === savedWorkspaceId
+      );
+
+      const personalWorkspace = loadedWorkspaces.find(
+        (workspace: any) => workspace.type === 'personal'
+      );
+
+      const defaultWorkspace =
+        savedWorkspace || personalWorkspace || loadedWorkspaces[0];
+
+      if (defaultWorkspace) {
+        setSelectedWorkspaceId(defaultWorkspace.id);
+      }
+    } catch (error: any) {
+      console.error('FETCH WORKSPACES ERROR:', error);
+      toast.error(error.message || 'Failed to load workspaces');
+    } finally {
+      setWorkspaceLoading(false);
+    }
+  };
+
+  const handleCreateCompany = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const name = companyName.trim();
+
+    if (!name) {
+      toast.error('Enter a company name');
+      return;
+    }
+
+    setCreatingCompany(true);
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          json.error || 'Failed to create company workspace'
+        );
+      }
+
+      toast.success('Company workspace created');
+      setCompanyName('');
+      setCompanyModalOpen(false);
+      await fetchWorkspaces();
+    } catch (error: any) {
+      console.error('CREATE COMPANY ERROR:', error);
+      toast.error(error.message || 'Could not create company workspace');
+    } finally {
+      setCreatingCompany(false);
     }
   };
 
@@ -121,6 +239,16 @@ export default function DashboardPage() {
         );
 
   const fetchDocuments = async () => {
+    const selectedWorkspace = workspaces.find(
+      (workspace: any) => workspace.id === selectedWorkspaceId
+    );
+
+    if (selectedWorkspace?.type === 'company') {
+      setDocuments([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -266,10 +394,14 @@ export default function DashboardPage() {
             </span>
 
             <button
-              onClick={() =>
-                setIsUploadOpen(true)
+              onClick={() => setIsUploadOpen(true)}
+              disabled={
+                workspaces.find(
+                  (workspace: any) =>
+                    workspace.id === selectedWorkspaceId
+                )?.type === 'company'
               }
-              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
               Upload Document
@@ -287,6 +419,104 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        {/* Workspaces */}
+        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Your Workspaces</h2>
+              <p className="text-sm text-zinc-400 mt-1">
+                Manage your personal and company workspace memberships.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCompanyModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold px-4 py-2 rounded-xl text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Create Company
+            </button>
+          </div>
+
+          <div className="mb-5">
+            <label
+              htmlFor="workspace-selector"
+              className="block text-sm font-medium text-zinc-300 mb-2"
+            >
+              Current Workspace
+            </label>
+
+            <select
+              id="workspace-selector"
+              value={selectedWorkspaceId}
+              onChange={(event) =>
+                handleWorkspaceChange(event.target.value)
+              }
+              disabled={workspaceLoading || workspaces.length === 0}
+              className="w-full sm:max-w-md bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+            >
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name} ({workspace.type === 'personal' ? 'Personal' : 'Company'})
+                </option>
+              ))}
+            </select>
+
+            {workspaces.find(
+              (workspace: any) => workspace.id === selectedWorkspaceId
+            )?.type === 'company' && (
+              <p className="text-sm text-amber-400 mt-3">
+                Company workspace selected. Shared document management
+                is not available yet, so personal documents are hidden.
+              </p>
+            )}
+          </div>
+
+          {workspaceLoading ? (
+            <p className="text-sm text-zinc-400 py-3">
+              Loading workspaces...
+            </p>
+          ) : workspaces.length === 0 ? (
+            <p className="text-sm text-zinc-400 py-3">
+              No workspaces found.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {workspaces.map((workspace) => (
+                <div
+                  key={workspace.id}
+                  className="border border-zinc-800 bg-zinc-950/50 rounded-xl p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="font-medium break-words">
+                        {workspace.name}
+                      </h3>
+                      <p className="text-xs text-zinc-400 mt-1">
+                        {workspace.type === 'personal'
+                          ? 'Personal workspace'
+                          : 'Company workspace'}
+                      </p>
+                      <span className="inline-block mt-2 text-xs rounded-md bg-zinc-800 px-2 py-1 text-zinc-300 capitalize">
+                        {workspace.role || 'member'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-zinc-500 mt-4">
+            Your documents remain in your personal workspace. Company document sharing is not enabled yet.
+          </p>
+        </section>
 
         {/* Metric Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -570,6 +800,77 @@ export default function DashboardPage() {
         </div>
 
       </main>
+
+      {companyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="company-modal-title"
+            className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-4 mb-5">
+              <h2 id="company-modal-title" className="text-lg font-semibold">
+                Create Company Workspace
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!creatingCompany) {
+                    setCompanyModalOpen(false);
+                  }
+                }}
+                disabled={creatingCompany}
+                aria-label="Close dialog"
+                className="p-2 text-zinc-400 hover:text-zinc-100 disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCompany}>
+              <label
+                htmlFor="company-name"
+                className="block text-sm text-zinc-300 mb-2"
+              >
+                Company name
+              </label>
+
+              <input
+                id="company-name"
+                type="text"
+                value={companyName}
+                onChange={(event) => setCompanyName(event.target.value)}
+                maxLength={120}
+                required
+                autoFocus
+                placeholder="Enter company name"
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500"
+              />
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setCompanyModalOpen(false)}
+                  disabled={creatingCompany}
+                  className="rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={creatingCompany || !companyName.trim()}
+                  className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
+                >
+                  {creatingCompany ? 'Creating...' : 'Create Company'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <UploadModal
         isOpen={isUploadOpen}
