@@ -281,13 +281,17 @@ export async function POST(req: Request) {
       !activation ||
       activation.success !== true
     ) {
-      const { error: cleanupError } = await supabaseAdmin
-        .from('workspace_invitations')
-        .update({ status: 'revoked' })
-        .eq('id', invitation.id);
+      const { error: recoveryError } = await supabaseAdmin.rpc(
+        'recover_workspace_invitation_activation',
+        {
+          p_invitation_id: invitation.id,
+          p_workspace_id: workspaceId,
+          p_invited_email: email,
+        }
+      );
 
-      if (cleanupError) {
-        console.error('FAILED INVITATION CLEANUP AFTER ACTIVATION ERROR');
+      if (recoveryError) {
+        console.error('INVITATION ACTIVATION RECOVERY FAILED');
       }
 
       console.error('INVITATION ACTIVATION FAILED');
