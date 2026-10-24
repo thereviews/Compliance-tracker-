@@ -11,12 +11,13 @@ export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey);
 
 // Helper to get authenticated headers for API routes
 export async function getAuthHeaders() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const token = session?.access_token;
 
   return {
-    'Authorization': token ? `Bearer ${token}` : '',
-    'Content-Type': 'application/json',
+    Authorization: token ? `Bearer ${token}` : '',
   };
 }
-

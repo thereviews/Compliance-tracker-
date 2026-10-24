@@ -1,7 +1,36 @@
-node_modules
-.next
-.env*.local
-.env
-.DS_Store
-tsconfig.tsbuildinfo
+# Dependencies
+node_modules/
+
+# Next.js generated files
 .next/
+out/
+build/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Deployment configuration
+.vercel/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# TypeScript generated files
+*.tsbuildinfo
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Editor and temporary files
+*.swp
+*.swo
+*~
+*.tmp
+*.business-backup
+scripts/local-cron.mjs

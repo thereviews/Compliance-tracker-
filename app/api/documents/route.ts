@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getAuthClient } from '@/lib/supabase';
-import { getPersonalWorkspaceId } from '@/lib/workspaces';
 
 export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get('Authorization');
     const supabase = getAuthClient(authHeader);
 
-    // 1. Authenticate the user.
+    // 1. Authenticate the current user.
     const {
       data: { user },
       error: authError,
@@ -20,27 +19,55 @@ export async function GET(req: Request) {
       );
     }
 
-    // 2. Resolve the user's personal workspace.
-    const workspaceId = await getPersonalWorkspaceId(
-      authHeader,
-      user.id
-    );
-
-    // 3. Read search parameters.
+    // 2. Require a workspace ID.
     const { searchParams } = new URL(req.url);
+    const workspaceId = searchParams.get('workspaceId');
     const search = searchParams.get('search');
 
-    // 4. Fetch documents belonging to this user and workspace.
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: 'Workspace ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Verify membership in the requested workspace.
+    const { data: membership, error: membershipError } =
+      await supabase
+        .from('workspace_members')
+        .select('workspace_id, role')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (membershipError) {
+      throw new Error(
+        `Workspace membership check failed: ${membershipError.message}`
+      );
+    }
+
+    if (!membership) {
+      return NextResponse.json(
+        { error: 'You do not have access to this workspace' },
+        { status: 403 }
+      );
+    }
+
+    // 4. Fetch workspace documents.
+    // RLS controls which rows the authenticated user can access.
     let query = supabase
       .from('compliance_documents')
-      .select('*, vendors!inner(name)')
-      .eq('user_id', user.id)
+      .select(
+        search?.trim()
+          ? '*, vendors!inner(name)'
+          : '*, vendors(name)'
+      )
       .eq('workspace_id', workspaceId);
 
-    if (search) {
+    if (search?.trim()) {
       query = query.ilike(
         'vendors.name',
-        `%${search}%`
+        `%${search.trim()}%`
       );
     }
 
@@ -50,12 +77,15 @@ export async function GET(req: Request) {
     );
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error(
+        `Document query failed: ${error.message}`
+      );
     }
 
     return NextResponse.json({
       success: true,
       documents: data || [],
+      role: membership.role,
     });
   } catch (error: unknown) {
     const message =

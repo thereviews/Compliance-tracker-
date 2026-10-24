@@ -23,6 +23,8 @@ function dateString(date: Date) {
 }
 
 export async function GET(req: Request) {
+  const startedAt = Date.now();
+
   try {
     const cronSecret = process.env.CRON_SECRET;
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -168,7 +170,7 @@ export async function GET(req: Request) {
 
       const recipient = userData.user.email;
 
-      // Check whether this particular reminder was already sent.
+      // Find or create the unique notification record.
       const {
         data: existing,
         error: notificationLookupError,
@@ -176,50 +178,84 @@ export async function GET(req: Request) {
         .from('expiration_notifications')
         .select('id, status')
         .eq('document_id', document.id)
+        .eq('reminder_type', 'expiration')
         .eq('days_before_expiration', daysUntilExpiration)
         .maybeSingle();
 
       if (notificationLookupError) {
         failures.push(
-          `Document ${document.id}: ${notificationLookupError.message}`
+          `Document ${document.id}: Could not check notification history`
         );
         continue;
       }
 
-      if (existing?.status === 'sent') {
-        skipped++;
-        continue;
-      }
+      let notificationId: string;
 
-      // Create or reset a notification record.
       if (existing) {
-        const { error: resetError } = await supabaseAdmin
-          .from('expiration_notifications')
-          .update({ status: 'pending' })
-          .eq('id', existing.id);
+        notificationId = existing.id;
 
-        if (resetError) {
+        if (existing.status === 'sent' || existing.status === 'sending') {
+          skipped++;
+          continue;
+        }
+
+        if (!['pending', 'failed'].includes(existing.status)) {
           failures.push(
-            `Document ${document.id}: ${resetError.message}`
+            `Document ${document.id}: Unexpected notification status`
           );
           continue;
         }
       } else {
-        const { error: insertError } = await supabaseAdmin
-          .from('expiration_notifications')
-          .insert({
-            document_id: document.id,
-            user_id: document.user_id,
-            days_before_expiration: daysUntilExpiration,
-            status: 'pending',
-          });
+        const { data: inserted, error: insertError } =
+          await supabaseAdmin
+            .from('expiration_notifications')
+            .insert({
+              document_id: document.id,
+              user_id: document.user_id,
+              reminder_type: 'expiration',
+              days_before_expiration: daysUntilExpiration,
+              status: 'pending',
+            })
+            .select('id')
+            .single();
 
-        if (insertError) {
+        if (insertError || !inserted) {
+          // Another execution may have inserted this unique reminder first.
+          if (insertError?.code === '23505') {
+            skipped++;
+            continue;
+          }
+
           failures.push(
-            `Document ${document.id}: ${insertError.message}`
+            `Document ${document.id}: Could not create notification record`
           );
           continue;
         }
+
+        notificationId = inserted.id;
+      }
+
+      // Atomically claim the reminder. Only one execution can change
+      // a pending/failed record to sending.
+      const { data: claimed, error: claimError } =
+        await supabaseAdmin
+          .from('expiration_notifications')
+          .update({ status: 'sending' })
+          .eq('id', notificationId)
+          .in('status', ['pending', 'failed'])
+          .select('id')
+          .maybeSingle();
+
+      if (claimError) {
+        failures.push(
+          `Document ${document.id}: Could not claim notification`
+        );
+        continue;
+      }
+
+      if (!claimed) {
+        skipped++;
+        continue;
       }
 
       const vendorLabel = vendorName || 'Your vendor';
@@ -278,12 +314,15 @@ Please sign in to your Compliance Tracker account to review this document.
             status: 'sent',
             sent_at: new Date().toISOString(),
           })
-          .eq('document_id', document.id)
-          .eq('days_before_expiration', daysUntilExpiration);
+          .eq('id', notificationId);
 
         if (sentUpdateError) {
+          console.error(
+            'Expiration email sent, but notification tracking failed:',
+            { documentId: document.id, error: sentUpdateError.message }
+          );
           failures.push(
-            `Email sent for ${document.id}, but tracking failed: ${sentUpdateError.message}`
+            `Email sent for document ${document.id}, but tracking failed`
           );
           continue;
         }
@@ -295,26 +334,83 @@ Please sign in to your Compliance Tracker account to review this document.
             ? emailError.message
             : String(emailError);
 
-        await supabaseAdmin
+        console.error('Expiration reminder email failed:', {
+          documentId: document.id,
+          error: message,
+        });
+
+        const { error: failedUpdateError } = await supabaseAdmin
           .from('expiration_notifications')
           .update({ status: 'failed' })
-          .eq('document_id', document.id)
-          .eq('days_before_expiration', daysUntilExpiration);
+          .eq('id', notificationId);
+
+        if (failedUpdateError) {
+          console.error('Could not mark expiration reminder as failed:', {
+            documentId: document.id,
+            error: failedUpdateError.message,
+          });
+        }
 
         failures.push(
-          `Email for document ${document.id}: ${message}`
+          `Email delivery failed for document ${document.id}`
         );
       }
     }
 
-    return NextResponse.json({
+    // Diagnostic only: old rows still marked "sending" may need investigation.
+    // created_at is not the time the row entered "sending", so do not auto-retry.
+    const staleSendingCutoff = new Date(
+      Date.now() - 30 * 60 * 1000
+    ).toISOString();
+
+    const {
+      data: oldSendingRows,
+      error: oldSendingError,
+    } = await supabaseAdmin
+      .from('expiration_notifications')
+      .select('id')
+      .eq('status', 'sending')
+      .eq('reminder_type', 'expiration')
+      .lt('created_at', staleSendingCutoff);
+
+    const oldSendingCount = oldSendingRows?.length ?? 0;
+
+    if (oldSendingError) {
+      console.error(
+        'Could not inspect old sending notifications:',
+        oldSendingError.message
+      );
+    } else if (oldSendingCount > 0) {
+      console.warn(
+        'Old notification rows remain in sending status; investigate before retrying:',
+        { count: oldSendingCount }
+      );
+    }
+
+    const result = {
       success: failures.length === 0,
+      oldSendingCount,
       date: todayStr,
+      checkedAt: new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
       documentsChecked: documents?.length || 0,
       emailsSent,
       remindersAlreadySent: skipped,
       failures,
+    };
+
+    console.info('Expiration cron completed:', {
+      success: result.success,
+      date: result.date,
+      durationMs: result.durationMs,
+      documentsChecked: result.documentsChecked,
+      emailsSent: result.emailsSent,
+      remindersAlreadySent: result.remindersAlreadySent,
+      failureCount: failures.length,
+      oldSendingCount,
     });
+
+    return NextResponse.json(result);
   } catch (error: unknown) {
     const message =
       error instanceof Error
@@ -324,10 +420,7 @@ Please sign in to your Compliance Tracker account to review this document.
     console.error('EXPIRATION CRON ERROR:', message);
 
     return NextResponse.json(
-      {
-        error: 'Expiration check failed',
-        details: message,
-      },
+      { error: 'Expiration check failed' },
       { status: 500 }
     );
   }

@@ -18,6 +18,115 @@ export async function GET(req: Request) {
       );
     }
 
+    // Ensure the authenticated user has a personal workspace.
+    // Existing personal workspaces are never renamed.
+    const {
+      data: existingPersonalWorkspace,
+      error: personalWorkspaceLookupError,
+    } = await supabaseAdmin
+      .from('workspaces')
+      .select('id')
+      .eq('created_by', user.id)
+      .eq('type', 'personal')
+      .maybeSingle();
+
+    if (personalWorkspaceLookupError) {
+      console.error(
+        'PERSONAL WORKSPACE LOOKUP ERROR:',
+        personalWorkspaceLookupError.message
+      );
+
+      return NextResponse.json(
+        { error: 'Could not check personal workspace' },
+        { status: 500 }
+      );
+    }
+
+    let personalWorkspaceId = existingPersonalWorkspace?.id;
+
+    if (!personalWorkspaceId) {
+      const metadataName =
+        typeof user.user_metadata?.full_name === 'string'
+          ? user.user_metadata.full_name.trim()
+          : '';
+
+      const emailPrefix = user.email?.split('@')[0]?.trim() || '';
+      const displayName = (metadataName || emailPrefix || 'Personal').slice(0, 100);
+      const personalWorkspaceName = `${displayName}'s Workspace`;
+
+      const {
+        data: newPersonalWorkspace,
+        error: personalWorkspaceCreateError,
+      } = await supabaseAdmin
+        .from('workspaces')
+        .insert({
+          name: personalWorkspaceName,
+          type: 'personal',
+          created_by: user.id,
+        })
+        .select('id')
+        .single();
+
+      if (personalWorkspaceCreateError || !newPersonalWorkspace) {
+        console.error(
+          'PERSONAL WORKSPACE CREATION ERROR:',
+          personalWorkspaceCreateError?.message
+        );
+
+        return NextResponse.json(
+          { error: 'Could not create personal workspace' },
+          { status: 500 }
+        );
+      }
+
+      personalWorkspaceId = newPersonalWorkspace.id;
+    }
+
+    // Ensure the user belongs to their personal workspace.
+    const {
+      data: existingPersonalMembership,
+      error: personalMembershipLookupError,
+    } = await supabaseAdmin
+      .from('workspace_members')
+      .select('id')
+      .eq('workspace_id', personalWorkspaceId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (personalMembershipLookupError) {
+      console.error(
+        'PERSONAL MEMBERSHIP LOOKUP ERROR:',
+        personalMembershipLookupError.message
+      );
+
+      return NextResponse.json(
+        { error: 'Could not check personal workspace membership' },
+        { status: 500 }
+      );
+    }
+
+    if (!existingPersonalMembership) {
+      const { error: personalMembershipCreateError } = await supabaseAdmin
+        .from('workspace_members')
+        .insert({
+          workspace_id: personalWorkspaceId,
+          user_id: user.id,
+          role: 'owner',
+        });
+
+      if (personalMembershipCreateError) {
+        console.error(
+          'PERSONAL MEMBERSHIP CREATION ERROR:',
+          personalMembershipCreateError.message
+        );
+
+        return NextResponse.json(
+          { error: 'Could not create personal workspace membership' },
+          { status: 500 }
+        );
+      }
+    }
+
     const { data: memberships, error: membershipError } =
       await supabase
         .from('workspace_members')

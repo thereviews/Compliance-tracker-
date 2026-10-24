@@ -370,3 +370,182 @@ If you were not expecting this invitation, you can ignore this email.`,
     return jsonError('Could not create invitation', 500);
   }
 }
+
+export async function GET(req: Request) {
+  try {
+    const authHeader = req.headers.get('Authorization');
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return jsonError('Unauthorized', 401);
+    }
+
+    const supabase = getAuthClient(authHeader);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return jsonError('Unauthorized', 401);
+    }
+
+    const workspaceId = new URL(req.url).searchParams.get('workspaceId');
+
+    if (
+      !workspaceId ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId)
+    ) {
+      return jsonError('A valid workspace ID is required', 400);
+    }
+
+    const { data: membership, error: membershipError } =
+      await supabaseAdmin
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (membershipError) {
+      return jsonError('Could not verify workspace permissions', 500);
+    }
+
+    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+      return jsonError('Only workspace owners and admins can view invitations', 403);
+    }
+
+    const { data: workspace, error: workspaceError } =
+      await supabaseAdmin
+        .from('workspaces')
+        .select('id, type')
+        .eq('id', workspaceId)
+        .maybeSingle();
+
+    if (workspaceError) {
+      return jsonError('Could not verify workspace', 500);
+    }
+
+    if (!workspace || workspace.type !== 'company') {
+      return jsonError('Invitations are available only for company workspaces', 400);
+    }
+
+    const { data: invitations, error: invitationsError } =
+      await supabaseAdmin
+        .from('workspace_invitations')
+        .select('id, invited_email, role, status, created_at, expires_at')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+    if (invitationsError) {
+      return jsonError('Could not load invitations', 500);
+    }
+
+    return NextResponse.json({ invitations: invitations ?? [] });
+  } catch {
+    return jsonError('Could not load invitations', 500);
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const authHeader = req.headers.get('Authorization');
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return jsonError('Unauthorized', 401);
+    }
+
+    const supabase = getAuthClient(authHeader);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return jsonError('Unauthorized', 401);
+    }
+
+    let body: unknown;
+
+    try {
+      body = await req.json();
+    } catch {
+      return jsonError('Invalid JSON request body', 400);
+    }
+
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return jsonError('Invalid request body', 400);
+    }
+
+    const input = body as Record<string, unknown>;
+    const workspaceId = input.workspaceId;
+    const invitationId = input.invitationId;
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (
+      typeof workspaceId !== 'string' ||
+      !uuidPattern.test(workspaceId) ||
+      typeof invitationId !== 'string' ||
+      !uuidPattern.test(invitationId)
+    ) {
+      return jsonError('Valid workspace and invitation IDs are required', 400);
+    }
+
+    const { data: membership, error: membershipError } =
+      await supabaseAdmin
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (membershipError) {
+      return jsonError('Could not verify workspace permissions', 500);
+    }
+
+    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+      return jsonError('Only workspace owners and admins can revoke invitations', 403);
+    }
+
+    const { data: workspace, error: workspaceError } =
+      await supabaseAdmin
+        .from('workspaces')
+        .select('id, type')
+        .eq('id', workspaceId)
+        .maybeSingle();
+
+    if (workspaceError) {
+      return jsonError('Could not verify workspace', 500);
+    }
+
+    if (!workspace || workspace.type !== 'company') {
+      return jsonError('Invitations are available only for company workspaces', 400);
+    }
+
+    const { data: invitation, error: invitationError } =
+      await supabaseAdmin
+        .from('workspace_invitations')
+        .update({ status: 'revoked' })
+        .eq('id', invitationId)
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'pending')
+        .select('id')
+        .maybeSingle();
+
+    if (invitationError) {
+      return jsonError('Could not revoke invitation', 500);
+    }
+
+    if (!invitation) {
+      return jsonError('Pending invitation not found', 404);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Invitation revoked',
+    });
+  } catch {
+    return jsonError('Could not revoke invitation', 500);
+  }
+}
