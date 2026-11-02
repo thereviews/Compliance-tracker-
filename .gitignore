@@ -34,3 +34,24 @@ Thumbs.db
 *.tmp
 *.business-backup
 scripts/local-cron.mjs
+
+# Local backups and pre-edit snapshots
+backups/
+*.bak
+*.bak-*
+*.backup
+*.before-*
+*.after-*
+*-backup
+*-backup-*
+
+# All nested backup and snapshot files
+**/*.bak
+**/*.backup
+**/*.before-*
+**/*.after-*
+**/*-backup
+**/*-backup-*
+**/*.kpi-backup
+**/*.table-backup
+**/*.workspace-backup

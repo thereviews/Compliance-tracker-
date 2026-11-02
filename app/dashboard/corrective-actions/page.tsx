@@ -24,6 +24,18 @@ import {
   UserRound,
   ListTodo,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 import { toast } from 'sonner';
 import { supabase, getAuthHeaders } from '@/lib/supabase-client';
 
@@ -55,10 +67,17 @@ type RegisterEntry = {
   status: string;
 };
 
+type SecurityControl = {
+  id: string;
+  title: string;
+  control_code: string | null;
+};
+
 type CorrectiveAction = {
   id: string;
   workspace_id: string;
   register_entry_id: string | null;
+  security_control_id: string | null;
   title: string;
   description: string | null;
   priority: ActionPriority;
@@ -75,6 +94,7 @@ type ActionForm = {
   title: string;
   description: string;
   register_entry_id: string;
+  security_control_id: string;
   priority: ActionPriority;
   status: ActionStatus;
   assigned_to: string;
@@ -86,6 +106,7 @@ const EMPTY_FORM: ActionForm = {
   title: '',
   description: '',
   register_entry_id: '',
+  security_control_id: '',
   priority: 'medium',
   status: 'open',
   assigned_to: '',
@@ -172,6 +193,7 @@ export default function CorrectiveActionsPage() {
 
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [registerEntries, setRegisterEntries] = useState<RegisterEntry[]>([]);
+  const [securityControls, setSecurityControls] = useState<SecurityControl[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -195,14 +217,14 @@ export default function CorrectiveActionsPage() {
       const { data, error } = await supabase.auth.getUser();
 
       if (error || !data.user) {
-        router.replace('/login');
+        router.replace('/signin');
         return;
       }
 
       setUserEmail(data.user.email || '');
       setUserId(data.user.id);
     } catch {
-      router.replace('/login');
+      router.replace('/signin');
     } finally {
       setAuthLoading(false);
     }
@@ -315,15 +337,46 @@ export default function CorrectiveActionsPage() {
     }
   }, [workspaceId]);
 
+  const fetchSecurityControls = useCallback(async () => {
+    if (!workspaceId) {
+      setSecurityControls([]);
+      return;
+    }
+
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(
+        `/api/cybersecurity-compliance/controls?workspaceId=${encodeURIComponent(workspaceId)}`,
+        { headers },
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Could not load security controls.');
+      }
+
+      setSecurityControls(result.controls || []);
+    } catch (error) {
+      setSecurityControls([]);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not load security controls.',
+      );
+    }
+  }, [workspaceId]);
+
   useEffect(() => {
     void fetchActions();
     void fetchRegisterEntries();
-  }, [fetchActions, fetchRegisterEntries]);
+    void fetchSecurityControls();
+  }, [fetchActions, fetchRegisterEntries, fetchSecurityControls]);
 
   const handleWorkspaceChange = (id: string) => {
     setWorkspaceId(id);
     setActions([]);
     setRegisterEntries([]);
+    setSecurityControls([]);
     setFormOpen(false);
     setEditing(null);
     setForm(EMPTY_FORM);
@@ -345,6 +398,7 @@ export default function CorrectiveActionsPage() {
       title: action.title,
       description: action.description || '',
       register_entry_id: action.register_entry_id || '',
+      security_control_id: action.security_control_id || '',
       priority: action.priority,
       status: action.status,
       assigned_to: action.assigned_to || '',
@@ -387,6 +441,7 @@ export default function CorrectiveActionsPage() {
         title: form.title.trim(),
         description: form.description.trim() || null,
         register_entry_id: form.register_entry_id || null,
+        security_control_id: form.security_control_id || null,
         priority: form.priority,
         status: form.status,
         assigned_to: form.assigned_to.trim() || null,
@@ -468,7 +523,7 @@ export default function CorrectiveActionsPage() {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.replace('/login');
+    router.replace('/signin');
   };
 
   const filteredActions = useMemo(() => {
@@ -487,6 +542,12 @@ export default function CorrectiveActionsPage() {
           action.assigned_to || '',
           action.resolution_notes || '',
           linkedEntry?.title || '',
+          securityControls.find(
+            (control) => control.id === action.security_control_id,
+          )?.title || '',
+          securityControls.find(
+            (control) => control.id === action.security_control_id,
+          )?.control_code || '',
         ].some((value) => value.toLowerCase().includes(query));
 
       return (
@@ -495,7 +556,7 @@ export default function CorrectiveActionsPage() {
         (priorityFilter === 'all' || action.priority === priorityFilter)
       );
     });
-  }, [actions, registerEntries, search, statusFilter, priorityFilter]);
+  }, [actions, registerEntries, securityControls, search, statusFilter, priorityFilter]);
 
   const today = localDateString();
 
@@ -517,6 +578,75 @@ export default function CorrectiveActionsPage() {
   const resolvedCount = actions.filter((action) =>
     ['resolved', 'closed'].includes(action.status),
   ).length;
+
+  const statusChartData = useMemo(
+    () =>
+      STATUSES.map((status) => ({
+        status,
+        name: label(status),
+        count: actions.filter((action) => action.status === status).length,
+        color: {
+          open: '#60a5fa',
+          in_progress: '#fbbf24',
+          blocked: '#f87171',
+          resolved: '#34d399',
+          closed: '#a1a1aa',
+        }[status],
+      })),
+    [actions],
+  );
+
+  const priorityChartData = useMemo(
+    () =>
+      PRIORITIES.map((priority) => ({
+        priority,
+        name: label(priority),
+        count: actions.filter((action) => action.priority === priority).length,
+        color: {
+          critical: '#f87171',
+          high: '#fb923c',
+          medium: '#fbbf24',
+          low: '#a1a1aa',
+        }[priority],
+      })),
+    [actions],
+  );
+
+  const overdueActions = useMemo(
+    () =>
+      actions
+        .filter(
+          (action) =>
+            Boolean(action.due_date) &&
+            action.due_date! < today &&
+            !['resolved', 'closed'].includes(action.status),
+        )
+        .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
+        .slice(0, 5),
+    [actions, today],
+  );
+
+  const applyStatusFilter = (status: ActionStatus) => {
+    setStatusFilter(status);
+    setPriorityFilter('all');
+    setSearch('');
+  };
+
+  const applyPriorityFilter = (priority: ActionPriority) => {
+    setPriorityFilter(priority);
+    setStatusFilter('all');
+    setSearch('');
+  };
+
+  const showOverdueActions = () => {
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setSearch('');
+    document.getElementById('corrective-actions-table')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
 
   if (authLoading) {
     return (
@@ -581,6 +711,7 @@ export default function CorrectiveActionsPage() {
               onClick={() => {
                 void fetchActions();
                 void fetchRegisterEntries();
+                void fetchSecurityControls();
               }}
               disabled={loading || !workspaceId}
               className="flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 transition hover:border-emerald-500 disabled:opacity-50"
@@ -656,7 +787,260 @@ export default function CorrectiveActionsPage() {
               />
             </section>
 
-            <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
+            <section className="grid gap-4 xl:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">Actions by status</h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Select a status to filter the action list.
+                    </p>
+                  </div>
+                  <CircleDot className="h-5 w-5 text-emerald-400" />
+                </div>
+
+                {actions.length === 0 ? (
+                  <div className="flex h-56 items-center justify-center text-sm text-zinc-500">
+                    Action status data will appear here.
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-4 h-56 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={statusChartData.filter((item) => item.count > 0)}
+                            dataKey="count"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={52}
+                            outerRadius={82}
+                            paddingAngle={3}
+                            onClick={(_, index) => {
+                              const item = statusChartData.filter(
+                                (entry) => entry.count > 0,
+                              )[index];
+                              if (item) applyStatusFilter(item.status);
+                            }}
+                          >
+                            {statusChartData
+                              .filter((item) => item.count > 0)
+                              .map((item) => (
+                                <Cell
+                                  key={item.status}
+                                  fill={item.color}
+                                  cursor="pointer"
+                                />
+                              ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#18181b',
+                              border: '1px solid #3f3f46',
+                              borderRadius: '12px',
+                              color: '#f4f4f5',
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {statusChartData.map((item) => (
+                        <button
+                          key={item.status}
+                          type="button"
+                          onClick={() => applyStatusFilter(item.status)}
+                          className="flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 transition hover:border-emerald-500"
+                        >
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          {item.name}
+                          <span className="font-semibold text-zinc-100">
+                            {item.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">Actions by priority</h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      See where the highest-priority work sits.
+                    </p>
+                  </div>
+                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                </div>
+
+                {actions.length === 0 ? (
+                  <div className="flex h-56 items-center justify-center text-sm text-zinc-500">
+                    Action priority data will appear here.
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-4 h-56 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={priorityChartData}
+                          margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
+                        >
+                          <CartesianGrid
+                            stroke="#3f3f46"
+                            strokeDasharray="3 3"
+                            vertical={false}
+                          />
+                          <XAxis
+                            dataKey="name"
+                            tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                            axisLine={{ stroke: '#52525b' }}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            allowDecimals={false}
+                            tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#18181b',
+                              border: '1px solid #3f3f46',
+                              borderRadius: '12px',
+                              color: '#f4f4f5',
+                            }}
+                          />
+                          <Bar
+                            dataKey="count"
+                            name="Actions"
+                            radius={[6, 6, 0, 0]}
+                            onClick={(_, index) => {
+                              const item = priorityChartData[index];
+                              if (item) {
+                                applyPriorityFilter(item.priority);
+                              }
+                            }}
+                          >
+                            {priorityChartData.map((item) => (
+                              <Cell
+                                key={item.priority}
+                                fill={item.color}
+                                cursor="pointer"
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {priorityChartData.map((item) => (
+                        <button
+                          key={item.priority}
+                          type="button"
+                          onClick={() => applyPriorityFilter(item.priority)}
+                          className="flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 transition hover:border-emerald-500"
+                        >
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          {item.name}
+                          <span className="font-semibold text-zinc-100">
+                            {item.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-red-500/20 bg-zinc-900 p-5">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-400" />
+                    <h3 className="font-semibold">Overdue actions</h3>
+                    <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-300">
+                      {overdueCount}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Unresolved actions past their due date.
+                  </p>
+                </div>
+                {overdueCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={showOverdueActions}
+                    className="self-start rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:border-red-400 hover:text-white sm:self-auto"
+                  >
+                    View all in action list
+                  </button>
+                )}
+              </div>
+
+              {overdueActions.length === 0 ? (
+                <div className="mt-4 rounded-xl border border-dashed border-zinc-800 px-4 py-8 text-center">
+                  <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
+                  <p className="text-sm text-zinc-400">
+                    No overdue actions. Your deadlines are on track.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 divide-y divide-zinc-800">
+                  {overdueActions.map((action) => (
+                    <button
+                      key={action.id}
+                      type="button"
+                      onClick={() => {
+                        setSearch(action.title);
+                        setStatusFilter('all');
+                        setPriorityFilter('all');
+                        document
+                          .getElementById('corrective-actions-table')
+                          ?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start',
+                          });
+                      }}
+                      className="flex w-full flex-col gap-2 py-3 text-left transition hover:bg-zinc-800/40 sm:flex-row sm:items-center sm:justify-between sm:px-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-zinc-100">
+                          {action.title}
+                        </span>
+                        <span className="mt-1 block text-xs text-zinc-500">
+                          {action.assigned_to || 'Unassigned'}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${priorityStyle(action.priority)}`}
+                        >
+                          {label(action.priority)}
+                        </span>
+                        <span className="text-xs text-red-300">
+                          Due {dateLabel(action.due_date)}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section
+              id="corrective-actions-table"
+              className="scroll-mt-24 space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5"
+            >
               <div className="flex flex-col gap-3 lg:flex-row">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
@@ -741,6 +1125,7 @@ export default function CorrectiveActionsPage() {
                         <th className="px-3 py-3 font-medium">Assigned to</th>
                         <th className="px-3 py-3 font-medium">Due date</th>
                         <th className="px-3 py-3 font-medium">Linked requirement</th>
+                        <th className="px-3 py-3 font-medium">Linked security control</th>
                         <th className="px-3 py-3 text-right font-medium">Actions</th>
                       </tr>
                     </thead>
@@ -748,6 +1133,9 @@ export default function CorrectiveActionsPage() {
                       {filteredActions.map((action) => {
                         const linkedEntry = registerEntries.find(
                           (entry) => entry.id === action.register_entry_id,
+                        );
+                        const linkedControl = securityControls.find(
+                          (control) => control.id === action.security_control_id,
                         );
 
                         const canEdit =
@@ -827,6 +1215,27 @@ export default function CorrectiveActionsPage() {
                                 <span className="text-zinc-500">
                                   {action.register_entry_id
                                     ? 'Linked entry unavailable'
+                                    : 'Not linked'}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="max-w-xs px-3 py-4">
+                              {linkedControl ? (
+                                <>
+                                  <p className="font-medium text-zinc-300">
+                                    {linkedControl.title}
+                                  </p>
+                                  {linkedControl.control_code && (
+                                    <p className="mt-1 text-xs text-zinc-500">
+                                      {linkedControl.control_code}
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-zinc-500">
+                                  {action.security_control_id
+                                    ? 'Linked control unavailable'
                                     : 'Not linked'}
                                 </span>
                               )}
@@ -930,6 +1339,38 @@ export default function CorrectiveActionsPage() {
                       Optional. Link this task to a requirement in your
                       Compliance Register.
                     </p>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>
+                      Linked security control
+                    </label>
+                    <select
+                      value={form.security_control_id}
+                      onChange={(event) =>
+                        updateForm('security_control_id', event.target.value)
+                      }
+                      className={inputClass}
+                    >
+                      <option value="">No linked security control</option>
+                      {securityControls.map((control) => (
+                        <option key={control.id} value={control.id}>
+                          {control.control_code
+                            ? `${control.control_code} · `
+                            : ''}
+                          {control.title}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-xs text-zinc-500">
+                      Optional. Link this remediation task to a security control
+                      in your Cybersecurity Compliance workspace.
+                    </p>
+                    {securityControls.length === 0 && (
+                      <p className="mt-1 text-xs text-amber-400">
+                        No security controls are available in this workspace yet.
+                      </p>
+                    )}
                   </div>
 
                   <div>

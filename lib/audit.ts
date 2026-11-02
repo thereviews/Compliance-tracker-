@@ -17,7 +17,10 @@ type AuditEntity =
   | 'risk_assessment'
   | 'workspace_member'
   | 'compliance_register_entry'
-  | 'corrective_action';
+  | 'corrective_action'
+  | 'security_control'
+  | 'security_evidence'
+  | 'license_and_renewal';
 
 interface AuditLogEntry {
   workspaceId: string;

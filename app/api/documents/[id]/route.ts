@@ -425,10 +425,7 @@ if (
     console.error('DOCUMENT UPDATE ERROR:', message);
 
     return NextResponse.json(
-      {
-        error: 'Update failed',
-        details: message,
-      },
+      { error: 'Update failed' },
       { status: 500 }
     );
   }
@@ -561,10 +558,7 @@ export async function DELETE(
     console.error('DOCUMENT DELETE ERROR:', message);
 
     return NextResponse.json(
-      {
-        error: 'Deletion failed',
-        details: message,
-      },
+      { error: 'Deletion failed' },
       { status: 500 }
     );
   }

@@ -18,21 +18,21 @@ export async function GET(request: Request) {
 
   if (!apiKey) {
     return Response.json(
-      { success: false, error: 'RESEND_API_KEY is missing' },
+      { success: false, error: 'Email service is not configured.' },
       { status: 500 }
     );
   }
 
   if (!recipient) {
     return Response.json(
-      { success: false, error: 'EXPIRATION_TEST_EMAIL is missing' },
+      { success: false, error: 'Email service is not configured.' },
       { status: 500 }
     );
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
     return Response.json(
-      { success: false, error: 'Test recipient has an invalid format' },
+      { success: false, error: 'Email service is not configured.' },
       { status: 400 }
     );
   }
@@ -54,8 +54,8 @@ export async function GET(request: Request) {
       console.error('Resend test email failed:', error);
 
       return Response.json(
-        { success: false, error: error.message },
-        { status: 400 }
+        { success: false, error: 'Unable to send the test email. Please try again later.' },
+        { status: 502 }
       );
     }
 
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
     return Response.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown email error',
+        error: 'Unable to send the test email. Please try again later.',
       },
       { status: 500 }
     );

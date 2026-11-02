@@ -19,13 +19,13 @@ export async function GET(req: Request) {
     }
 
     // Ensure the authenticated user has a personal workspace.
-    // Existing personal workspaces are never renamed.
+    // Automatically generated personal workspace names follow the account name.
     const {
       data: existingPersonalWorkspace,
       error: personalWorkspaceLookupError,
     } = await supabaseAdmin
       .from('workspaces')
-      .select('id')
+      .select('id, name')
       .eq('created_by', user.id)
       .eq('type', 'personal')
       .maybeSingle();
@@ -42,17 +42,40 @@ export async function GET(req: Request) {
       );
     }
 
+    const metadataName =
+      typeof user.user_metadata?.full_name === 'string'
+        ? user.user_metadata.full_name.trim()
+        : '';
+
+    const emailPrefix = user.email?.split('@')[0]?.trim() || '';
+    const displayName = (metadataName || emailPrefix || 'Personal').slice(0, 100);
+    const personalWorkspaceName = `${displayName}'s Workspace`;
+
     let personalWorkspaceId = existingPersonalWorkspace?.id;
 
-    if (!personalWorkspaceId) {
-      const metadataName =
-        typeof user.user_metadata?.full_name === 'string'
-          ? user.user_metadata.full_name.trim()
-          : '';
+    if (
+      existingPersonalWorkspace &&
+      typeof existingPersonalWorkspace.name === 'string' &&
+      existingPersonalWorkspace.name.endsWith("'s Workspace") &&
+      existingPersonalWorkspace.name !== personalWorkspaceName
+    ) {
+      const { error: renameError } = await supabaseAdmin
+        .from('workspaces')
+        .update({ name: personalWorkspaceName })
+        .eq('id', existingPersonalWorkspace.id)
+        .eq('created_by', user.id)
+        .eq('type', 'personal');
 
-      const emailPrefix = user.email?.split('@')[0]?.trim() || '';
-      const displayName = (metadataName || emailPrefix || 'Personal').slice(0, 100);
-      const personalWorkspaceName = `${displayName}'s Workspace`;
+      if (renameError) {
+        console.error('PERSONAL WORKSPACE RENAME ERROR:', renameError.message);
+        return NextResponse.json(
+          { error: 'Could not update personal workspace name' },
+          { status: 500 }
+        );
+      }
+    }
+
+    if (!personalWorkspaceId) {
 
       const {
         data: newPersonalWorkspace,

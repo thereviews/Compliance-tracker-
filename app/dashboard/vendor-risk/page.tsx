@@ -17,6 +17,18 @@ import {
   ClipboardCheck,
   CheckCircle2,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 import { toast } from 'sonner';
 import { supabase, getAuthHeaders } from '@/lib/supabase-client';
 
@@ -167,7 +179,7 @@ export default function VendorRiskPage() {
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (error || !user) {
-      router.replace('/login');
+      router.replace('/signin');
       return;
     }
 
@@ -291,6 +303,94 @@ export default function VendorRiskPage() {
       : false,
   ).length;
 
+  const dashboardStats = (() => {
+    const currentDate = today();
+    const dueSoonDate = new Date(`${currentDate}T00:00:00`);
+    dueSoonDate.setDate(dueSoonDate.getDate() + 30);
+    const dueSoonLimit = [
+      dueSoonDate.getFullYear(),
+      String(dueSoonDate.getMonth() + 1).padStart(2, '0'),
+      String(dueSoonDate.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    const highRisk = assessments.filter(
+      (assessment) => assessment.overall_risk === 'high',
+    ).length;
+    const criticalRisk = assessments.filter(
+      (assessment) => assessment.overall_risk === 'critical',
+    ).length;
+    const overdueReviews = assessments.filter(
+      (assessment) =>
+        Boolean(assessment.next_review_date) &&
+        assessment.next_review_date! < currentDate,
+    ).length;
+    const reviewsDueSoon = assessments.filter(
+      (assessment) =>
+        Boolean(assessment.next_review_date) &&
+        assessment.next_review_date! >= currentDate &&
+        assessment.next_review_date! <= dueSoonLimit,
+    ).length;
+
+    return {
+      total: assessments.length,
+      highRisk,
+      criticalRisk,
+      overdueReviews,
+      reviewsDueSoon,
+      highOrCritical: highRisk + criticalRisk,
+    };
+  })();
+
+  const riskChartData = RISK_LEVELS.map((risk) => ({
+    risk,
+    name: label(risk),
+    count: assessments.filter(
+      (assessment) => assessment.overall_risk === risk,
+    ).length,
+    color: {
+      low: '#34d399',
+      medium: '#fbbf24',
+      high: '#fb923c',
+      critical: '#f87171',
+    }[risk],
+  }));
+
+  const statusChartData = STATUSES.map((status) => ({
+    status,
+    name: label(status),
+    count: assessments.filter(
+      (assessment) => assessment.assessment_status === status,
+    ).length,
+    color: status === 'completed' ? '#34d399' : '#a1a1aa',
+  }));
+
+  const attentionAssessments = assessments
+    .filter((assessment) => {
+      const overdue =
+        Boolean(assessment.next_review_date) &&
+        assessment.next_review_date! < today();
+      return (
+        assessment.overall_risk === 'critical' ||
+        assessment.overall_risk === 'high' ||
+        overdue
+      );
+    })
+    .sort((a, b) => {
+      const riskRank: Record<RiskLevel, number> = {
+        low: 0,
+        medium: 1,
+        high: 2,
+        critical: 3,
+      };
+      const riskDifference =
+        riskRank[b.overall_risk] - riskRank[a.overall_risk];
+      if (riskDifference !== 0) return riskDifference;
+      return (a.next_review_date || '9999-12-31').localeCompare(
+        b.next_review_date || '9999-12-31',
+      );
+    })
+    .slice(0, 5);
+
   const openNewAssessment = () => {
     if (!vendorId || !canCreate) return;
     setEditing(null);
@@ -395,7 +495,7 @@ export default function VendorRiskPage() {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.replace('/login');
+    router.replace('/signin');
   };
 
   if (authLoading) {
@@ -474,6 +574,199 @@ export default function VendorRiskPage() {
 
         {workspaceId && (
           <>
+            {/* Workspace-wide vendor risk dashboard */}
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-xl font-semibold">Workspace risk overview</h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Risk exposure and review priorities across all vendor assessments in this workspace.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                  <p className="text-sm text-zinc-400">Total assessments</p>
+                  <p className="mt-3 text-3xl font-bold">{dashboardStats.total}</p>
+                  <p className="mt-1 text-xs text-zinc-500">Across all workspace vendors</p>
+                </div>
+                <div className="rounded-2xl border border-orange-500/20 bg-zinc-900 p-5">
+                  <p className="text-sm text-zinc-400">High-risk assessments</p>
+                  <p className="mt-3 text-3xl font-bold text-orange-300">{dashboardStats.highRisk}</p>
+                  <p className="mt-1 text-xs text-zinc-500">Rated high overall risk</p>
+                </div>
+                <div className="rounded-2xl border border-red-500/20 bg-zinc-900 p-5">
+                  <p className="text-sm text-zinc-400">Critical-risk assessments</p>
+                  <p className="mt-3 text-3xl font-bold text-red-300">{dashboardStats.criticalRisk}</p>
+                  <p className="mt-1 text-xs text-zinc-500">Highest risk rating</p>
+                </div>
+                <div className="rounded-2xl border border-amber-500/20 bg-zinc-900 p-5">
+                  <p className="text-sm text-zinc-400">Overdue reviews</p>
+                  <p className="mt-3 text-3xl font-bold text-amber-300">{dashboardStats.overdueReviews}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {dashboardStats.reviewsDueSoon} more due within 30 days
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-2">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                  <div>
+                    <h4 className="font-semibold">Overall risk distribution</h4>
+                    <p className="mt-1 text-xs text-zinc-500">Select a risk level to focus on matching assessments.</p>
+                  </div>
+                  {dashboardStats.total === 0 ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+                      No assessments to chart yet.
+                    </div>
+                  ) : (
+                    <div className="mt-3 grid items-center gap-4 sm:grid-cols-2">
+                      <div className="h-64 min-w-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={riskChartData}
+                              dataKey="count"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={58}
+                              outerRadius={88}
+                              paddingAngle={3}
+                            >
+                              {riskChartData.map((item) => (
+                                <Cell key={item.risk} fill={item.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: '#18181b',
+                                border: '1px solid #3f3f46',
+                                borderRadius: '12px',
+                                color: '#f4f4f5',
+                              }}
+                              formatter={(value) => [value, 'Assessments']}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="space-y-2">
+                        {riskChartData.map((item) => (
+                          <div key={item.risk} className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                              <span className="text-sm text-zinc-300">{item.name}</span>
+                            </div>
+                            <span className="text-sm font-semibold">{item.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                  <div>
+                    <h4 className="font-semibold">Assessment completion</h4>
+                    <p className="mt-1 text-xs text-zinc-500">Draft assessments still need review; completed assessments have been marked finished.</p>
+                  </div>
+                  {dashboardStats.total === 0 ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+                      No assessments to chart yet.
+                    </div>
+                  ) : (
+                    <div className="mt-4 h-64 min-w-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={statusChartData} margin={{ top: 12, right: 12, left: -18, bottom: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                          <XAxis dataKey="name" tick={{ fill: '#a1a1aa', fontSize: 12 }} axisLine={{ stroke: '#52525b' }} tickLine={false} />
+                          <YAxis allowDecimals={false} tick={{ fill: '#a1a1aa', fontSize: 12 }} axisLine={false} tickLine={false} />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#18181b',
+                              border: '1px solid #3f3f46',
+                              borderRadius: '12px',
+                              color: '#f4f4f5',
+                            }}
+                            formatter={(value) => [value, 'Assessments']}
+                          />
+                          <Bar dataKey="count" name="Assessments" radius={[6, 6, 0, 0]}>
+                            {statusChartData.map((item) => (
+                              <Cell key={item.status} fill={item.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="font-semibold">Vendor attention required</h4>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      High or critical risk ratings and assessments with overdue reviews.
+                    </p>
+                  </div>
+                  <span className="text-sm text-zinc-400">
+                    {attentionAssessments.length} shown
+                  </span>
+                </div>
+
+                {attentionAssessments.length === 0 ? (
+                  <p className="mt-5 rounded-xl border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-400">
+                    No high-priority vendor risks or overdue reviews found.
+                  </p>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {attentionAssessments.map((assessment) => {
+                      const vendorName =
+                        assessment.vendors?.name ||
+                        vendors.find((vendor) => vendor.id === assessment.vendor_id)?.name ||
+                        'Unknown vendor';
+                      const isOverdue =
+                        Boolean(assessment.next_review_date) &&
+                        assessment.next_review_date! < today();
+
+                      return (
+                        <div key={assessment.id} className="flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{vendorName}</p>
+                            <p className="mt-1 text-xs text-zinc-500">
+                              Assessed {dateLabel(assessment.assessment_date)}
+                              {' · '}Next review {dateLabel(assessment.next_review_date)}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskStyle(assessment.overall_risk)}`}>
+                              {label(assessment.overall_risk)} risk
+                            </span>
+                            {isOverdue && (
+                              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
+                                Review overdue
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVendorId(assessment.vendor_id);
+                                setFormOpen(false);
+                                setEditing(null);
+                              }}
+                              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-emerald-500 hover:text-emerald-400"
+                            >
+                              View vendor
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
                 <p className="text-sm text-zinc-400">Assessments</p>

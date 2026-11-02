@@ -21,12 +21,10 @@ type NoticeDocument = {
 type WorkspaceReminderSetting = {
   workspace_id: string;
   notice_reminder_days: number[] | null;
-  enabled: boolean;
 };
 
 type ReminderSettingsValue = {
   days: number[];
-  enabled: boolean;
 };
 
 function dateString(date: Date): string {
@@ -131,7 +129,7 @@ export async function GET(req: Request) {
       error: settingsError,
     } = await supabaseAdmin
       .from('workspace_reminder_settings')
-      .select('workspace_id, notice_reminder_days, enabled');
+      .select('workspace_id, notice_reminder_days');
 
     if (settingsError) {
       console.error('NOTICE REMINDER SETTINGS QUERY FAILED');
@@ -159,7 +157,6 @@ export async function GET(req: Request) {
                 day > 0
             )
           : [90, 60, 30, 7],
-        enabled: setting.enabled,
       });
     }
 
@@ -216,9 +213,7 @@ export async function GET(req: Request) {
         : undefined;
 
       const reminderDaysForDocument = workspaceSettings
-        ? workspaceSettings.enabled
-          ? workspaceSettings.days
-          : []
+        ? workspaceSettings.days
         : defaultReminderDays;
 
       if (

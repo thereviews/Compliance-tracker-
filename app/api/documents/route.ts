@@ -96,10 +96,7 @@ export async function GET(req: Request) {
     console.error('DOCUMENTS FETCH ERROR:', message);
 
     return NextResponse.json(
-      {
-        error: 'Failed to fetch documents',
-        details: message,
-      },
+      { error: 'Failed to fetch documents' },
       { status: 500 }
     );
   }

@@ -2,11 +2,15 @@
   "crons": [
     {
       "path": "/api/cron/check-expirations",
-      "schedule": "5 17 * * *"
+      "schedule": "50 5 * * *"
     },
     {
       "path": "/api/cron/check-notice-deadlines",
-      "schedule": "5 17 * * *"
+      "schedule": "50 5 * * *"
+    },
+    {
+      "path": "/api/cron/check-compliance-reminders",
+      "schedule": "50 5 * * *"
     }
   ]
 }

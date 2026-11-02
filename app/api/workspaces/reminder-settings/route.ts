@@ -118,7 +118,7 @@ export async function PUT(req: Request) {
     }
 
     const input = body as Record<string, unknown>;
-    const { workspaceId, notice_reminder_days, enabled } = input;
+    const { workspaceId, notice_reminder_days } = input;
 
     if (
       typeof workspaceId !== 'string' ||
@@ -144,10 +144,6 @@ export async function PUT(req: Request) {
       );
     }
 
-    if (typeof enabled !== 'boolean') {
-      return jsonError('The enabled field must be true or false', 400);
-    }
-
     const { data: membership, error: membershipError } =
       await getMembership(workspaceId, user.id);
 
@@ -169,7 +165,6 @@ export async function PUT(req: Request) {
           {
             workspace_id: workspaceId,
             notice_reminder_days: notice_reminder_days,
-            enabled,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'workspace_id' }

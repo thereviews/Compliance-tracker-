@@ -108,7 +108,7 @@ export default function ConfirmEmailPage() {
 
         {status === 'success' && (
           <Link
-            href="/login"
+            href="/signin"
             className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-3 font-medium text-white hover:bg-indigo-700"
           >
             Continue to login
@@ -124,7 +124,7 @@ export default function ConfirmEmailPage() {
               Return to signup
             </Link>
             <Link
-              href="/login"
+              href="/signin"
               className="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-3 font-medium text-slate-700 hover:bg-slate-50"
             >
               Go to login

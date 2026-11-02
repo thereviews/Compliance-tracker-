@@ -14,6 +14,18 @@ import {
   CalendarDays,
   Filter,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
 import { toast } from 'sonner';
 import { supabase, getAuthHeaders } from '@/lib/supabase-client';
 
@@ -119,6 +131,47 @@ export default function AuditLogsPage() {
     (workspace) => workspace.id === workspaceId
   );
 
+  const actionChartData = actions
+    .map((item) => ({
+      name: label(item),
+      value: logs.filter((log) => log.action === item).length,
+    }))
+    .filter((item) => item.value > 0);
+
+  const actionColors: Record<string, string> = {
+    Created: '#34d399',
+    Updated: '#fbbf24',
+    Deleted: '#f87171',
+    Uploaded: '#60a5fa',
+    Viewed: '#a78bfa',
+    Downloaded: '#22d3ee',
+    'Status Changed': '#fb923c',
+  };
+
+  const entityChartData = Array.from(
+    logs.reduce((counts, log) => {
+      counts.set(
+        log.entity_type,
+        (counts.get(log.entity_type) || 0) + 1
+      );
+      return counts;
+    }, new Map<string, number>()),
+    ([name, count]) => ({ name: label(name), count })
+  ).sort((a, b) => b.count - a.count);
+
+  const distinctActions = new Set(logs.map((log) => log.action)).size;
+  const eventsToday = logs.filter((log) => {
+    const date = new Date(log.created_at);
+    const now = new Date();
+
+    return (
+      !Number.isNaN(date.getTime()) &&
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate()
+    );
+  }).length;
+
   const checkUser = useCallback(async () => {
     try {
       const {
@@ -127,14 +180,14 @@ export default function AuditLogsPage() {
       } = await supabase.auth.getUser();
 
       if (error || !user) {
-        router.replace('/login');
+        router.replace('/signin');
         return;
       }
 
       setUserEmail(user.email || '');
       setAuthLoading(false);
     } catch {
-      router.replace('/login');
+      router.replace('/signin');
     }
   }, [router]);
 
@@ -392,6 +445,102 @@ export default function AuditLogsPage() {
             </p>
           </div>
         </section>
+
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Activity Insights</h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              Metrics and charts summarize events on the current page only.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
+              <p className="text-sm text-zinc-400">Action types · Current page</p>
+              <p className="mt-2 text-3xl font-bold">{distinctActions}</p>
+              <p className="mt-1 text-xs text-zinc-500">Different action types displayed</p>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
+              <p className="text-sm text-zinc-400">Events today · Current page</p>
+              <p className="mt-2 text-3xl font-bold">{eventsToday}</p>
+              <p className="mt-1 text-xs text-zinc-500">Displayed events recorded today</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
+              <h3 className="font-semibold">Action Distribution · Current page</h3>
+              <p className="mt-1 text-xs text-zinc-500">Events grouped by action.</p>
+              {actionChartData.length === 0 ? (
+                <div className="flex h-60 items-center justify-center text-sm text-zinc-500">
+                  No events on this page to chart.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={actionChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="46%"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={3}
+                    >
+                      {actionChartData.map((entry, index) => (
+                        <Cell
+                          key={`${entry.name}-${index}`}
+                          fill={actionColors[entry.name] || "#a1a1aa"}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+              {actionChartData.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                  {actionChartData.map((entry) => (
+                    <div key={entry.name} className="flex items-center gap-2 text-xs text-zinc-400">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: actionColors[entry.name] || "#a1a1aa" }}
+                      />
+                      <span>{entry.name}: {entry.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
+              <h3 className="font-semibold">Entity Breakdown · Current page</h3>
+              <p className="mt-1 text-xs text-zinc-500">Events grouped by entity type.</p>
+              {entityChartData.length === 0 ? (
+                <div className="flex h-60 items-center justify-center text-sm text-zinc-500">
+                  No entities on this page to chart.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart
+                    data={entityChartData}
+                    layout="vertical"
+                    margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
+                  >
+                    <CartesianGrid stroke="#3f3f46" strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} stroke="#a1a1aa" fontSize={12} />
+                    <YAxis type="category" dataKey="name" width={135} stroke="#a1a1aa" fontSize={11} />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Events" fill="#34d399" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </section>
+
+
 
         <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
           <div className="flex items-center gap-2">

@@ -432,11 +432,7 @@ Return strictly valid JSON matching the provided schema.`,
     }
 
     return NextResponse.json(
-      {
-        error: 'Upload failed',
-        details: message,
-        step,
-      },
+      { error: 'Upload failed' },
       { status: 500 }
     );
   }

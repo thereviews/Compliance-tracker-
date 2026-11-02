@@ -20,6 +20,18 @@ import {
   CalendarDays,
   FileText,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 import { toast } from 'sonner';
 import { supabase, getAuthHeaders } from '@/lib/supabase-client';
 
@@ -180,7 +192,7 @@ export default function ComplianceRegisterPage() {
     } = await supabase.auth.getUser();
 
     if (error || !user) {
-      router.replace('/login');
+      router.replace('/signin');
       return;
     }
 
@@ -406,7 +418,7 @@ export default function ComplianceRegisterPage() {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.replace('/login');
+    router.replace('/signin');
   };
 
   const filteredEntries = useMemo(() => {
@@ -431,6 +443,71 @@ export default function ComplianceRegisterPage() {
       );
     });
   }, [entries, search, statusFilter, frameworkFilter, priorityFilter]);
+
+  const statusChartData = useMemo(
+    () => [
+      { name: 'Compliant', value: entries.filter((entry) => entry.status === 'compliant').length, color: '#10b981', status: 'compliant' },
+      { name: 'In progress', value: entries.filter((entry) => entry.status === 'in_progress').length, color: '#f59e0b', status: 'in_progress' },
+      { name: 'Non-compliant', value: entries.filter((entry) => entry.status === 'non_compliant').length, color: '#ef4444', status: 'non_compliant' },
+      { name: 'Not started', value: entries.filter((entry) => entry.status === 'not_started').length, color: '#71717a', status: 'not_started' },
+      { name: 'Not applicable', value: entries.filter((entry) => entry.status === 'not_applicable').length, color: '#3b82f6', status: 'not_applicable' },
+    ],
+    [entries],
+  );
+
+  const frameworkChartData = useMemo(
+    () =>
+      FRAMEWORKS.map((framework) => ({
+        name: framework,
+        count: entries.filter((entry) => entry.framework === framework).length,
+      })).filter((item) => item.count > 0),
+    [entries],
+  );
+
+  const priorityChartData = useMemo(
+    () =>
+      [
+        { name: 'Critical', value: entries.filter((entry) => entry.priority === 'critical').length, color: '#ef4444', priority: 'critical' },
+        { name: 'High', value: entries.filter((entry) => entry.priority === 'high').length, color: '#f97316', priority: 'high' },
+        { name: 'Medium', value: entries.filter((entry) => entry.priority === 'medium').length, color: '#f59e0b', priority: 'medium' },
+        { name: 'Low', value: entries.filter((entry) => entry.priority === 'low').length, color: '#71717a', priority: 'low' },
+      ],
+    [entries],
+  );
+
+  const reviewDateStats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const next30Days = new Date(today);
+    next30Days.setDate(next30Days.getDate() + 30);
+
+    const reviewEntries = entries.filter(
+      (entry) => entry.review_date && entry.status !== 'not_applicable',
+    );
+
+    const overdue = reviewEntries.filter((entry) => {
+      const date = new Date(`${entry.review_date}T00:00:00`);
+      return !Number.isNaN(date.getTime()) && date < today && entry.status !== 'compliant';
+    });
+
+    const dueSoon = reviewEntries.filter((entry) => {
+      const date = new Date(`${entry.review_date}T00:00:00`);
+      return !Number.isNaN(date.getTime()) && date >= today && date <= next30Days;
+    });
+
+    return { overdue, dueSoon };
+  }, [entries]);
+
+  const applyStatusChartFilter = (status: string) => {
+    setStatusFilter(status);
+    setSearch('');
+  };
+
+  const applyPriorityChartFilter = (priority: string) => {
+    setPriorityFilter(priority);
+    setSearch('');
+  };
 
   const compliantCount = entries.filter(
     (entry) => entry.status === 'compliant',
@@ -577,7 +654,190 @@ export default function ComplianceRegisterPage() {
               />
             </section>
 
-            <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
+            <section className="grid gap-4 xl:grid-cols-3">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <div>
+                  <h3 className="font-semibold text-zinc-100">Requirement status</h3>
+                  <p className="mt-1 text-sm text-zinc-400">Select a segment to filter the register.</p>
+                </div>
+                {entries.length === 0 ? (
+                  <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+                    Add requirements to see status analytics.
+                  </div>
+                ) : (
+                  <div className="relative mt-3 h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={62}
+                          outerRadius={92}
+                          paddingAngle={2}
+                          stroke="none"
+                          onClick={(_, index) => {
+                            const item = statusChartData[index];
+                            if (item) applyStatusChartFilter(item.status);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {statusChartData.map((item) => (
+                            <Cell key={item.status} fill={item.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#18181b',
+                            border: '1px solid #3f3f46',
+                            borderRadius: '12px',
+                            color: '#f4f4f5',
+                          }}
+                          formatter={(value) => [value, 'Requirements']}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-bold">{entries.length}</span>
+                      <span className="text-xs text-zinc-500">Total</span>
+                    </div>
+                  </div>
+                )}
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {statusChartData.map((item) => (
+                    <button
+                      key={item.status}
+                      type="button"
+                      onClick={() => applyStatusChartFilter(item.status)}
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-zinc-300 transition hover:bg-zinc-800"
+                    >
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="min-w-0 flex-1">{item.name}</span>
+                      <span className="font-semibold">{item.value}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <h3 className="font-semibold text-zinc-100">Requirements by framework</h3>
+                <p className="mt-1 text-sm text-zinc-400">Distribution across your frameworks.</p>
+                {frameworkChartData.length === 0 ? (
+                  <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+                    No framework data yet.
+                  </div>
+                ) : (
+                  <div className="mt-4 h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={frameworkChartData} margin={{ top: 8, right: 8, left: -20, bottom: 8 }}>
+                        <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fill: '#a1a1aa', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fill: '#a1a1aa', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#18181b', border: '1px solid #3f3f46', borderRadius: '12px', color: '#f4f4f5' }}
+                          formatter={(value) => [value, 'Requirements']}
+                        />
+                        <Bar dataKey="count" name="Requirements" fill="#10b981" radius={[5, 5, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <h3 className="font-semibold text-zinc-100">Priority distribution</h3>
+                <p className="mt-1 text-sm text-zinc-400">Review the requirements needing attention.</p>
+                {entries.length === 0 ? (
+                  <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+                    No priority data yet.
+                  </div>
+                ) : (
+                  <div className="mt-4 h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={priorityChartData} margin={{ top: 8, right: 8, left: -20, bottom: 8 }}>
+                        <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fill: '#a1a1aa', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fill: '#a1a1aa', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#18181b', border: '1px solid #3f3f46', borderRadius: '12px', color: '#f4f4f5' }}
+                          formatter={(value) => [value, 'Requirements']}
+                        />
+                        <Bar
+                          dataKey="value"
+                          name="Requirements"
+                          radius={[5, 5, 0, 0]}
+                          onClick={(_, index) => {
+                            const item = priorityChartData[index];
+                            if (item) applyPriorityChartFilter(item.priority);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {priorityChartData.map((item) => (
+                            <Cell key={item.priority} fill={item.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {priorityChartData.map((item) => (
+                    <button
+                      key={item.priority}
+                      type="button"
+                      onClick={() => applyPriorityChartFilter(item.priority)}
+                      className="rounded-lg border border-zinc-800 px-2.5 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800"
+                    >
+                      <span style={{ color: item.color }}>{item.name}</span>
+                      {' · '}{item.value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-4 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('all');
+                  setFrameworkFilter('all');
+                  setPriorityFilter('all');
+                  document.getElementById('review-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className="rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-zinc-900 p-5 text-left transition hover:border-red-500/40"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-zinc-300">Overdue reviews</span>
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                </div>
+                <p className="mt-3 text-3xl font-bold text-red-400">{reviewDateStats.overdue.length}</p>
+                <p className="mt-1 text-sm text-zinc-400">Past-due reviews on requirements not marked compliant.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('all');
+                  setFrameworkFilter('all');
+                  setPriorityFilter('all');
+                  document.getElementById('review-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-zinc-900 p-5 text-left transition hover:border-amber-500/40"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-zinc-300">Reviews due in 30 days</span>
+                  <CalendarDays className="h-5 w-5 text-amber-400" />
+                </div>
+                <p className="mt-3 text-3xl font-bold text-amber-400">{reviewDateStats.dueSoon.length}</p>
+                <p className="mt-1 text-sm text-zinc-400">Upcoming review dates, including today.</p>
+              </button>
+            </section>
+
+            <section id="review-alerts" className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5">
               <div className="flex flex-col gap-3 lg:flex-row">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />

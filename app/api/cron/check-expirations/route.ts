@@ -116,6 +116,7 @@ export async function GET(req: Request) {
       await supabaseAdmin
         .from('compliance_documents')
         .select('id, user_id, expiration_date, vendors!inner(name)')
+        .or('auto_renewal.is.null,auto_renewal.eq.false')
         .gte('expiration_date', todayStr)
         .lte('expiration_date', thirtyDaysStr);
 

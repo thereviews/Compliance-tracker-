@@ -16,7 +16,20 @@ import {
   ListTodo,
   Printer,
   LogOut,
+  ExternalLink,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
 import { toast } from 'sonner';
 import { supabase, getAuthHeaders } from '@/lib/supabase-client';
 
@@ -289,18 +302,127 @@ export default function ComplianceReportsPage() {
     };
   }, [entries, actions, today]);
 
+  const requirementStatusChart = useMemo(
+    () => [
+      { name: 'Compliant', value: metrics.compliant, color: '#34d399' },
+      { name: 'Non-compliant', value: metrics.nonCompliant, color: '#f87171' },
+      { name: 'In progress', value: metrics.inProgress, color: '#fbbf24' },
+      { name: 'Not started', value: metrics.notStarted, color: '#a1a1aa' },
+    ],
+    [metrics],
+  );
+
+  const requirementPriorityChart = useMemo(
+    () => [
+      { name: 'Critical', count: metrics.priorityCounts.critical, fill: '#f87171' },
+      { name: 'High', count: metrics.priorityCounts.high, fill: '#fb923c' },
+      { name: 'Medium', count: metrics.priorityCounts.medium, fill: '#fbbf24' },
+      { name: 'Low', count: metrics.priorityCounts.low, fill: '#a1a1aa' },
+    ],
+    [metrics],
+  );
+
+  const actionStatusChart = useMemo(
+    () => [
+      {
+        name: 'Open',
+        value: actions.filter((action) => action.status === 'open').length,
+        color: '#60a5fa',
+      },
+      {
+        name: 'In progress',
+        value: actions.filter((action) => action.status === 'in_progress').length,
+        color: '#fbbf24',
+      },
+      {
+        name: 'Blocked',
+        value: actions.filter((action) => action.status === 'blocked').length,
+        color: '#f87171',
+      },
+      {
+        name: 'Resolved',
+        value: actions.filter((action) => action.status === 'resolved').length,
+        color: '#34d399',
+      },
+      {
+        name: 'Closed',
+        value: actions.filter((action) => action.status === 'closed').length,
+        color: '#a78bfa',
+      },
+    ],
+    [actions],
+  );
+
+  const attentionItems = useMemo(() => {
+    const items: {
+      id: string;
+      title: string;
+      description: string;
+      priority: 'high' | 'medium';
+      href: string;
+    }[] = [];
+
+    for (const entry of metrics.overdueReviews) {
+      items.push({
+        id: `review-${entry.id}`,
+        title: `Overdue review: ${entry.title}`,
+        description: `Review date ${formatDate(entry.review_date)} · ${label(entry.framework)}`,
+        priority: 'medium',
+        href: '/dashboard/compliance-register',
+      });
+    }
+
+    for (const action of metrics.overdueActions) {
+      items.push({
+        id: `action-${action.id}`,
+        title: `Overdue action: ${action.title}`,
+        description: `Due ${formatDate(action.due_date)} · ${label(action.priority)} priority`,
+        priority: action.priority === 'critical' || action.priority === 'high' ? 'high' : 'medium',
+        href: '/dashboard/corrective-actions',
+      });
+    }
+
+    for (const entry of entries) {
+      if (
+        entry.status === 'non_compliant' &&
+        (entry.priority === 'critical' || entry.priority === 'high')
+      ) {
+        items.push({
+          id: `noncompliant-${entry.id}`,
+          title: `High-priority gap: ${entry.title}`,
+          description: `${label(entry.priority)} priority · ${label(entry.framework)}`,
+          priority: 'high',
+          href: '/dashboard/compliance-register',
+        });
+      }
+    }
+
+    const uniqueItems = Array.from(
+      new Map(items.map((item) => [item.id, item])).values(),
+    );
+
+    return uniqueItems
+      .sort((a, b) => {
+        if (a.priority !== b.priority) {
+          return a.priority === 'high' ? -1 : 1;
+        }
+        return a.title.localeCompare(b.title);
+      })
+      .slice(0, 8);
+  }, [entries, metrics.overdueActions, metrics.overdueReviews]);
+
   const checkUser = useCallback(async () => {
     try {
       const { data, error } = await supabase.auth.getUser();
 
       if (error || !data.user) {
-        router.replace('/login');
+        router.replace('/signin');
         return;
       }
 
       setUserEmail(data.user.email || '');
     } catch {
-      router.replace('/login');
+      router.replace('/signin');
     } finally {
       setAuthLoading(false);
     }
@@ -515,7 +637,7 @@ export default function ComplianceReportsPage() {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.replace('/login');
+    router.replace('/signin');
   };
 
   if (authLoading) {
@@ -785,6 +907,189 @@ export default function ComplianceReportsPage() {
                   icon={<Clock className="h-5 w-5 text-amber-400" />}
                 />
               </div>
+            </section>
+
+            <section className="report-section grid gap-6 xl:grid-cols-2">
+              <article className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <h3 className="text-lg font-semibold">Compliance status distribution</h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Current status of requirements in this workspace.
+                </p>
+
+                <div className="mt-4 grid items-center gap-4 sm:grid-cols-2">
+                  <div className="h-64 min-w-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={requirementStatusChart}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={58}
+                          outerRadius={88}
+                          paddingAngle={3}
+                          stroke="none"
+                        >
+                          {requirementStatusChart.map((item) => (
+                            <Cell key={item.name} fill={item.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#18181b',
+                            border: '1px solid #3f3f46',
+                            borderRadius: 12,
+                            color: '#f4f4f5',
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-3">
+                    {requirementStatusChart.map((item) => (
+                      <div key={item.name} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="flex items-center gap-2 text-zinc-300">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                          {item.name}
+                        </span>
+                        <span className="font-semibold tabular-nums">{item.value}</span>
+                      </div>
+                    ))}
+                    <p className="border-t border-zinc-800 pt-3 text-xs text-zinc-500">
+                      {metrics.applicableCount} applicable requirements; not-applicable items are excluded from the compliance rate.
+                    </p>
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <h3 className="text-lg font-semibold">Requirement priority</h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Priority distribution across register entries.
+                </p>
+
+                <div className="mt-5 h-64 min-w-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={requirementPriorityChart} margin={{ top: 8, right: 8, left: -20, bottom: 4 }}>
+                      <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fill: '#a1a1aa', fontSize: 12 }} axisLine={{ stroke: '#3f3f46' }} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fill: '#a1a1aa', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#18181b',
+                          border: '1px solid #3f3f46',
+                          borderRadius: 12,
+                          color: '#f4f4f5',
+                        }}
+                      />
+                      <Bar dataKey="count" name="Requirements" radius={[6, 6, 0, 0]}>
+                        {requirementPriorityChart.map((item) => (
+                          <Cell key={item.name} fill={item.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Use critical and high-priority counts to help decide where to focus review effort.
+                </p>
+              </article>
+
+              <article className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <h3 className="text-lg font-semibold">Corrective-action status</h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Remediation progress across tracked actions.
+                </p>
+
+                <div className="mt-4 grid items-center gap-4 sm:grid-cols-2">
+                  <div className="h-64 min-w-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={actionStatusChart}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={58}
+                          outerRadius={88}
+                          paddingAngle={3}
+                          stroke="none"
+                        >
+                          {actionStatusChart.map((item) => (
+                            <Cell key={item.name} fill={item.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#18181b',
+                            border: '1px solid #3f3f46',
+                            borderRadius: 12,
+                            color: '#f4f4f5',
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-3">
+                    {actionStatusChart.map((item) => (
+                      <div key={item.name} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="flex items-center gap-2 text-zinc-300">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                          {item.name}
+                        </span>
+                        <span className="font-semibold tabular-nums">{item.value}</span>
+                      </div>
+                    ))}
+                    <p className="border-t border-zinc-800 pt-3 text-xs text-zinc-500">
+                      {metrics.openActions.length} actions remain open, in progress, or blocked.
+                    </p>
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold">Items needing attention</h3>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      Prioritized findings based on current report data.
+                    </p>
+                  </div>
+                  <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+                </div>
+
+                {attentionItems.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {attentionItems.map((item) => (
+                      <div key={item.id} className="flex items-start justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-medium">{item.title}</p>
+                          <p className="mt-1 text-xs text-zinc-400">{item.description}</p>
+                          <span className={`mt-2 inline-block rounded-full px-2 py-1 text-xs ${item.priority === 'high' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                            {item.priority === 'high' ? 'High attention' : 'Review needed'}
+                          </span>
+                        </div>
+                        <Link
+                          href={item.href}
+                          className="no-print inline-flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                        >
+                          Open <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+                    <CheckCircle2 className="mb-2 h-6 w-6 text-emerald-400" />
+                    <p className="font-medium">No priority findings detected</p>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      There are no overdue reviews, overdue actions, or critical/high-priority non-compliant requirements in the current report data.
+                    </p>
+                  </div>
+                )}
+              </article>
             </section>
 
             <section className="report-section rounded-2xl border border-zinc-800 bg-zinc-900 p-5">

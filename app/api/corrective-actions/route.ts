@@ -21,6 +21,7 @@ const editableFields = [
   'title',
   'description',
   'register_entry_id',
+  'security_control_id',
   'priority',
   'status',
   'assigned_to',
@@ -154,6 +155,18 @@ function validActionFields(
     }
   }
 
+  if ('security_control_id' in body) {
+    const controlId = body.security_control_id;
+
+    if (
+      controlId !== null &&
+      controlId !== '' &&
+      (typeof controlId !== 'string' || !uuidPattern.test(controlId))
+    ) {
+      return 'The linked security control ID must be a valid UUID.';
+    }
+  }
+
   return null;
 }
 
@@ -194,6 +207,34 @@ async function verifyRegisterEntry(
     .from('compliance_register_entries')
     .select('id')
     .eq('id', registerEntryId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+
+  return !error && !!data;
+}
+
+async function verifySecurityControl(
+  supabase: NonNullable<
+    Awaited<ReturnType<typeof authenticate>>['supabase']
+  >,
+  securityControlId: unknown,
+  workspaceId: string,
+): Promise<boolean> {
+  if (securityControlId === null || securityControlId === '') {
+    return true;
+  }
+
+  if (
+    typeof securityControlId !== 'string' ||
+    !uuidPattern.test(securityControlId)
+  ) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from('security_controls')
+    .select('id')
+    .eq('id', securityControlId)
     .eq('workspace_id', workspaceId)
     .maybeSingle();
 
@@ -335,6 +376,20 @@ export async function POST(req: Request) {
       );
     }
 
+    if (
+      'security_control_id' in body &&
+      !(await verifySecurityControl(
+        supabase,
+        body.security_control_id,
+        workspaceId,
+      ))
+    ) {
+      return jsonError(
+        'The linked security control does not exist in this workspace.',
+        400,
+      );
+    }
+
     const { data, error } = await supabase
       .from('corrective_actions')
       .insert({
@@ -342,6 +397,7 @@ export async function POST(req: Request) {
         title: (body.title as string).trim(),
         description: normalizeOptionalText(body.description),
         register_entry_id: normalizeOptionalText(body.register_entry_id),
+        security_control_id: normalizeOptionalText(body.security_control_id),
         priority: body.priority ?? 'medium',
         status: body.status ?? 'open',
         assigned_to: normalizeOptionalText(body.assigned_to),
@@ -368,6 +424,7 @@ export async function POST(req: Request) {
         priority: data.priority,
         status: data.status,
         register_entry_id: data.register_entry_id,
+        security_control_id: data.security_control_id,
       },
     });
 
@@ -485,6 +542,20 @@ export async function PATCH(req: Request) {
       );
     }
 
+    if (
+      'security_control_id' in changes &&
+      !(await verifySecurityControl(
+        supabase,
+        changes.security_control_id,
+        workspaceId,
+      ))
+    ) {
+      return jsonError(
+        'The linked security control does not exist in this workspace.',
+        400,
+      );
+    }
+
     const update: Record<string, unknown> = {};
 
     for (const key of keys) {
@@ -498,6 +569,7 @@ export async function PATCH(req: Request) {
         [
           'description',
           'register_entry_id',
+          'security_control_id',
           'assigned_to',
           'due_date',
           'resolution_notes',

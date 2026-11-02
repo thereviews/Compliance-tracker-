@@ -196,8 +196,8 @@ const handleEvidenceUpload = async (
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
 
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-zinc-800">
@@ -223,7 +223,7 @@ const handleEvidenceUpload = async (
             ? handleUploadAndAnalyze
             : handleEvidenceUpload
 }
-            className="p-6 space-y-5"
+            className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 pb-6 sm:p-6"
           >
           {/* Upload mode */}
 <div className="space-y-2">
@@ -493,7 +493,7 @@ const handleEvidenceUpload = async (
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
             >
               {uploadMode === 'contract'
-                ? 'Upload & Analyze with Gemini AI'
+                ? 'Upload & Extract Information'
                 : 'Upload Compliance Evidence'}
             </button>
           </form>
@@ -509,8 +509,7 @@ const handleEvidenceUpload = async (
             </h4>
 
             <p className="text-xs text-zinc-400">
-              Uploading to secure storage and running Gemini AI
-              extraction engine.
+              Uploading your document and extracting key information securely.
             </p>
           </div>
         )}

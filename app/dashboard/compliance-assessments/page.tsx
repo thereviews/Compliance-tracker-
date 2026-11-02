@@ -19,6 +19,18 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
+import {
   supabase,
   getAuthHeaders,
 } from '@/lib/supabase-client';
@@ -189,7 +201,7 @@ export default function CompliancePage() {
     } = await supabase.auth.getUser();
 
     if (error || !user) {
-      router.replace('/login');
+      router.replace('/signin');
       return;
     }
 
@@ -323,6 +335,73 @@ export default function CompliancePage() {
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  const statusChartData = STATUSES.map((status) => ({
+    status,
+    name: label(status),
+    value: assessments.filter((assessment) => assessment.status === status).length,
+  })).filter((item) => item.value > 0);
+
+  const frameworkChartData = FRAMEWORKS.map((framework) => {
+    const frameworkAssessments = assessments.filter(
+      (assessment) => assessment.framework === framework
+    );
+
+    return {
+      framework,
+      assessed: frameworkAssessments.filter(
+        (assessment) => assessment.status !== 'not_assessed'
+      ).length,
+      compliant: frameworkAssessments.filter(
+        (assessment) => assessment.status === 'compliant'
+      ).length,
+    };
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const thirtyDaysFromNow = new Date(today);
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+  const upcomingDeadlines = assessments
+    .flatMap((assessment) => {
+      const vendorName =
+        assessment.vendors?.name ||
+        vendors.find((vendor) => vendor.id === assessment.vendor_id)?.name ||
+        'Unknown vendor';
+
+      return [
+        {
+          id: `${assessment.id}-review`,
+          vendorName,
+          framework: assessment.framework,
+          type: 'Review',
+          date: assessment.next_review_date,
+        },
+        {
+          id: `${assessment.id}-certificate`,
+          vendorName,
+          framework: assessment.framework,
+          type: 'Certificate expiration',
+          date: assessment.certificate_expiration_date,
+        },
+      ];
+    })
+    .filter((item) => {
+      if (!item.date) return false;
+      const deadline = new Date(`${item.date}T00:00:00`);
+      return !Number.isNaN(deadline.getTime()) && deadline <= thirtyDaysFromNow;
+    })
+    .map((item) => ({
+      ...item,
+      daysRemaining: Math.round(
+        (new Date(`${item.date}T00:00:00`).getTime() - today.getTime()) /
+          (1000 * 60 * 60 * 24)
+      ),
+    }))
+    .sort((a, b) => a.daysRemaining - b.daysRemaining)
+    .slice(0, 5);
 
   const vendorAssessments = assessments.filter(
     (assessment) => assessment.vendor_id === vendorId
@@ -478,7 +557,7 @@ export default function CompliancePage() {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.replace('/login');
+    router.replace('/signin');
   };
 
   if (authLoading) {
@@ -633,6 +712,190 @@ export default function CompliancePage() {
                   Expired or non-compliant
                 </p>
               </div>
+            </section>
+
+            <section className="grid gap-4 xl:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <h2 className="text-lg font-semibold">Assessment status</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Workspace-wide breakdown across all vendor assessments.
+                </p>
+
+                {statusChartData.length === 0 ? (
+                  <p className="py-12 text-center text-sm text-zinc-500">
+                    No assessments to summarize yet.
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 sm:items-center">
+                    <div className="h-56 min-w-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={statusChartData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={52}
+                            outerRadius={82}
+                            paddingAngle={3}
+                          >
+                            {statusChartData.map((entry) => {
+                              const colors: Record<string, string> = {
+                                not_assessed: "#71717a",
+                                under_review: "#fbbf24",
+                                compliant: "#34d399",
+                                non_compliant: "#f87171",
+                                expired: "#fb7185",
+                              };
+
+                              return (
+                                <Cell
+                                  key={entry.status}
+                                  fill={colors[entry.status] || "#a1a1aa"}
+                                />
+                              );
+                            })}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "#18181b",
+                              border: "1px solid #3f3f46",
+                              borderRadius: 12,
+                              color: "#fafafa",
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="space-y-3">
+                      {statusChartData.map((item) => (
+                        <div
+                          key={item.status}
+                          className="flex items-center justify-between gap-3 text-sm"
+                        >
+                          <span className="text-zinc-300">{item.name}</span>
+                          <span className="font-semibold tabular-nums">
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
+                      <p className="border-t border-zinc-800 pt-3 text-xs text-zinc-500">
+                        {assessments.length} total assessment records
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+                <h2 className="text-lg font-semibold">Framework coverage</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Assessment records by framework, across this workspace.
+                </p>
+
+                <div className="mt-4 h-64 min-w-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={frameworkChartData}
+                      margin={{ top: 8, right: 8, left: -20, bottom: 4 }}
+                    >
+                      <CartesianGrid stroke="#27272a" strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="framework"
+                        tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                        axisLine={{ stroke: "#3f3f46" }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#18181b",
+                          border: "1px solid #3f3f46",
+                          borderRadius: 12,
+                          color: "#fafafa",
+                        }}
+                      />
+                      <Bar
+                        dataKey="assessed"
+                        name="Assessed"
+                        fill="#34d399"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="compliant"
+                        name="Compliant"
+                        fill="#60a5fa"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-4 text-xs text-zinc-400">
+                  <span><span className="mr-2 inline-block h-2 w-2 rounded-sm bg-emerald-400" />Assessed</span>
+                  <span><span className="mr-2 inline-block h-2 w-2 rounded-sm bg-blue-400" />Compliant</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Upcoming reviews & expirations</h2>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Overdue items and deadlines within the next 30 days.
+                  </p>
+                </div>
+                <span className="text-sm text-zinc-500">
+                  {upcomingDeadlines.length} shown
+                </span>
+              </div>
+
+              {upcomingDeadlines.length === 0 ? (
+                <p className="py-8 text-center text-sm text-zinc-500">
+                  No review or certificate deadlines due in the next 30 days.
+                </p>
+              ) : (
+                <div className="mt-4 divide-y divide-zinc-800">
+                  {upcomingDeadlines.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">{item.vendorName}</p>
+                        <p className="mt-1 text-sm text-zinc-400">
+                          {item.framework} · {item.type}
+                        </p>
+                      </div>
+                      <div className="shrink-0 sm:text-right">
+                        <p className="text-sm font-medium">
+                          {dateLabel(item.date)}
+                        </p>
+                        <p className={`mt-1 text-xs ${
+                          item.daysRemaining < 0
+                            ? "text-red-400"
+                            : item.daysRemaining <= 7
+                              ? "text-amber-400"
+                              : "text-zinc-500"
+                        }`}>
+                          {item.daysRemaining < 0
+                            ? `${Math.abs(item.daysRemaining)} days overdue`
+                            : item.daysRemaining === 0
+                              ? "Due today"
+                              : `Due in ${item.daysRemaining} days`}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
