@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -129,7 +129,7 @@ function expirationInfo(value: string | null) {
   return { text: `Valid until ${dateLabel(value)}`, style: 'text-emerald-400' };
 }
 
-export default function ComplianceEvidencePage() {
+function ComplianceEvidenceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1123,5 +1123,19 @@ export default function ComplianceEvidencePage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function ComplianceEvidencePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center">
+          <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
+        </main>
+      }
+    >
+      <ComplianceEvidenceContent />
+    </Suspense>
   );
 }
