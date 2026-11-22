@@ -404,7 +404,12 @@ export function UploadEvidenceModal({
       return;
     }
 
-    if (proposal.deadline && !isValidISODate(proposal.deadline)) {
+    if (!proposal.deadline) {
+      toast.error('A requirement deadline is required.');
+      return;
+    }
+
+    if (!isValidISODate(proposal.deadline)) {
       toast.error('Please enter a valid deadline.');
       return;
     }
@@ -512,7 +517,7 @@ export function UploadEvidenceModal({
                 <Upload className="w-8 h-8 mx-auto mb-2 text-slate-500" />
 
                 {file ? (
-                  <p className="text-sm font-medium text-emerald-700">
+                  <p className="text-sm font-medium text-emerald-700 break-all min-w-0 max-w-full">
                     {file.name}
                   </p>
                 ) : (
@@ -591,7 +596,7 @@ export function UploadEvidenceModal({
                   {requirements.find(req => req.id === selectedReqId)?.title || 'Selected requirement'}
                 </p>
                 {file && (
-                  <p className="text-xs text-slate-600 mt-2">
+                  <p className="text-xs text-slate-600 mt-2 break-all min-w-0 max-w-full">
                     Evidence: {file.name}
                   </p>
                 )}
@@ -762,13 +767,14 @@ export function UploadEvidenceModal({
                             </label>
                             <input
                               type="date"
+                              required
                               value={proposal.deadline}
                               onChange={e => updateProposal(index, 'deadline', e.target.value)}
                               className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                             />
                             {!proposal.deadline && (
                               <p className="text-xs text-slate-500 mt-1">
-                                No deadline identified — add one if known.
+                                A deadline is required before saving this requirement.
                               </p>
                             )}
                           </div>

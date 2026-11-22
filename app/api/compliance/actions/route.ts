@@ -190,10 +190,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (dueDate != null &&
-      (typeof dueDate !== 'string' || !isValidISODate(dueDate))) {
+    if (typeof dueDate !== 'string' || !dueDate.trim() || !isValidISODate(dueDate)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid due date.' },
+        { success: false, error: 'A valid action due date is required.' },
         { status: 400 }
       );
     }
@@ -344,8 +343,11 @@ export async function PATCH(req: Request) {
     }
 
     if (dueDate !== undefined) {
-      if (dueDate !== null && (typeof dueDate !== 'string' || !isValidISODate(dueDate))) {
-        return NextResponse.json({ success: false, error: 'Invalid due date.' }, { status: 400 });
+      if (typeof dueDate !== 'string' || !dueDate.trim() || !isValidISODate(dueDate)) {
+        return NextResponse.json(
+          { success: false, error: 'A valid action due date is required.' },
+          { status: 400 }
+        );
       }
       updates.due_date = dueDate;
     }

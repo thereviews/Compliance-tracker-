@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [requirements, setRequirements] = useState<any[]>([]);
   const [updatingRequirementId, setUpdatingRequirementId] = useState<string | null>(null);
   const [editingRequirementId, setEditingRequirementId] = useState<string | null>(null);
+  const [creatingRequirement, setCreatingRequirement] = useState(false);
   const [savingRequirement, setSavingRequirement] = useState(false);
   const [deletingRequirementId, setDeletingRequirementId] = useState<string | null>(null);
   const [requirementTitle, setRequirementTitle] = useState('');
@@ -795,6 +796,11 @@ export default function Dashboard() {
       return;
     }
 
+    if (!actionDueDate || !/^\\d{4}-\\d{2}-\\d{2}$/.test(actionDueDate)) {
+      toast.error('An action due date is required.');
+      return;
+    }
+
     setSavingAction(true);
 
     try {
@@ -1008,6 +1014,7 @@ export default function Dashboard() {
 
   const cancelEditRequirement = () => {
     setEditingRequirementId(null);
+    setCreatingRequirement(false);
     setRequirementTitle('');
     setRequirementDescription('');
     setRequirementSource('');
@@ -1017,27 +1024,45 @@ export default function Dashboard() {
     setRequirementOwnerId('');
   };
 
+  const startCreateRequirement = () => {
+    cancelEditRequirement();
+    setRequirementPriority('Medium');
+    setCreatingRequirement(true);
+  };
+
   const saveRequirement = async () => {
-    if (!workspace?.id || !editingRequirementId) return;
+    if (!workspace?.id || (!editingRequirementId && !creatingRequirement)) return;
 
     if (!requirementTitle.trim()) {
       toast.error('Requirement title is required.');
       return;
     }
 
+    if (!requirementDeadline || !/^\\d{4}-\\d{2}-\\d{2}$/.test(requirementDeadline)) {
+      toast.error('A valid requirement deadline is required.');
+      return;
+    }
+
+    const isCreating = creatingRequirement;
+
     setSavingRequirement(true);
 
     try {
       const headers = await getAuthHeaders();
       const response = await fetch('/api/compliance/register', {
-        method: 'PATCH',
+        method: isCreating ? 'POST' : 'PATCH',
         headers: {
           ...headers,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           workspaceId: workspace.id,
-          requirementId: editingRequirementId,
+          ...(isCreating ? {
+            appliesTo: 'our_organization',
+            confirmed: true
+          } : {
+            requirementId: editingRequirementId
+          }),
           title: requirementTitle,
           description: requirementDescription || null,
           obligationSource: requirementSource,
@@ -1056,9 +1081,13 @@ export default function Dashboard() {
 
       await loadWorkspaceData(workspace.id, ['requirements']);
       cancelEditRequirement();
-      toast.success('Requirement updated successfully.');
+      toast.success(
+        isCreating
+          ? 'Requirement created successfully.'
+          : 'Requirement updated successfully.'
+      );
     } catch (error: any) {
-      console.error('Requirement edit error:', error);
+      console.error('Requirement save error:', error);
       toast.error(error.message || 'Could not save requirement.');
     } finally {
       setSavingRequirement(false);
@@ -1664,7 +1693,7 @@ export default function Dashboard() {
             className="flex shrink-0 items-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 sm:px-4"
           >
             <Upload className="h-4 w-4 shrink-0" strokeWidth={2} />
-            <span>Upload Evidence</span>
+            <span>Upload</span>
           </button>
         </div>
       </header>
@@ -2302,9 +2331,20 @@ export default function Dashboard() {
                   Track your obligations, ownership, deadlines and compliance status.
                 </p>
               </div>
-              <p className="text-sm text-slate-500">
-                Showing {filteredRequirements.length} of {requirements.length} obligations
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-slate-500">
+                  Showing {filteredRequirements.length} of {requirements.length} obligations
+                </p>
+                <button
+                  type="button"
+                  onClick={startCreateRequirement}
+                  disabled={savingRequirement}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Requirement
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -2427,12 +2467,16 @@ export default function Dashboard() {
               )}
             </div>
 
-            {editingRequirementId && (
+            {(editingRequirementId || creatingRequirement) && (
               <div className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
                 <div className="mb-5">
-                  <h3 className="text-base font-semibold text-slate-900">Edit requirement</h3>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    {creatingRequirement ? 'Create requirement' : 'Edit requirement'}
+                  </h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    Update the obligation details, ownership and compliance status.
+                    {creatingRequirement
+                      ? 'Add an obligation to your register. You can attach supporting evidence later.'
+                      : 'Update the obligation details, ownership and compliance status.'}
                   </p>
                 </div>
 
@@ -2501,6 +2545,7 @@ export default function Dashboard() {
                     </label>
                     <input
                       type="date"
+                      required
                       value={requirementDeadline}
                       onChange={(event) => setRequirementDeadline(event.target.value)}
                       className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -2557,7 +2602,11 @@ export default function Dashboard() {
                     disabled={savingRequirement || !requirementTitle.trim()}
                     className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {savingRequirement ? 'Saving...' : 'Save Changes'}
+                    {savingRequirement
+                      ? 'Saving...'
+                      : creatingRequirement
+                        ? 'Create Requirement'
+                        : 'Save Changes'}
                   </button>
                 </div>
               </div>
@@ -2584,7 +2633,7 @@ export default function Dashboard() {
                   </p>
                   <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
                     {requirements.length === 0
-                      ? 'Confirm a requirement from an uploaded evidence document to add it to your register.'
+                      ? 'Create a requirement directly, or upload a document to extract and confirm requirements.'
                       : 'Try changing your search or filters to see more results.'}
                   </p>
                   {requirements.length > 0 && (
@@ -3167,6 +3216,7 @@ export default function Dashboard() {
                       <label className="mb-2 block text-sm font-medium text-slate-700">Due date</label>
                       <input
                         type="date"
+                        required
                         value={actionDueDate}
                         onChange={(e) => setActionDueDate(e.target.value)}
                         className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"

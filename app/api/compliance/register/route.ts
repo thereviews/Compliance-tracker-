@@ -132,12 +132,17 @@ export async function POST(req: Request) {
       confirmed
     } = body;
 
-    if (!isUuid(workspaceId) || !isUuid(evidenceId)) {
+    if (
+      !isUuid(workspaceId) ||
+      (evidenceId != null && evidenceId !== '' && !isUuid(evidenceId))
+    ) {
       return NextResponse.json(
-        { error: 'Valid workspaceId and evidenceId are required.' },
+        { error: 'A valid workspaceId and, when supplied, evidenceId are required.' },
         { status: 400 }
       );
     }
+
+    const hasEvidence = isUuid(evidenceId);
 
     if (typeof title !== 'string' || !title.trim()) {
       return NextResponse.json(
@@ -201,7 +206,14 @@ export async function POST(req: Request) {
       );
     }
 
-    if (cleanDeadline && !isValidISODate(cleanDeadline)) {
+    if (!cleanDeadline) {
+      return NextResponse.json(
+        { error: 'A requirement deadline is required.' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidISODate(cleanDeadline)) {
       return NextResponse.json(
         { error: 'Deadline must use YYYY-MM-DD format.' },
         { status: 400 }
@@ -238,22 +250,24 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Verify evidence belongs to the same workspace.
-    const { data: evidence, error: evidenceError } =
-      await supabase
-        .from('compliance_evidence')
-        .select('id')
-        .eq('id', evidenceId)
-        .eq('workspace_id', workspaceId)
-        .maybeSingle();
+    // 4. Verify evidence only when one was supplied.
+    if (hasEvidence) {
+      const { data: evidence, error: evidenceError } =
+        await supabase
+          .from('compliance_evidence')
+          .select('id')
+          .eq('id', evidenceId)
+          .eq('workspace_id', workspaceId)
+          .maybeSingle();
 
-    if (evidenceError) throw new Error(evidenceError.message);
+      if (evidenceError) throw new Error(evidenceError.message);
 
-    if (!evidence) {
-      return NextResponse.json(
-        { error: 'Evidence document not found in this workspace.' },
-        { status: 404 }
-      );
+      if (!evidence) {
+        return NextResponse.json(
+          { error: 'Evidence document not found in this workspace.' },
+          { status: 404 }
+        );
+      }
     }
 
     // 5. Verify responsible person is a workspace member.
@@ -306,34 +320,38 @@ export async function POST(req: Request) {
 
     createdRequirementId = requirement.id;
 
-    // 7. Link the original evidence to this requirement.
-    const { error: linkError } = await supabase
-      .from('compliance_evidence_requirements')
-      .insert({
-        workspace_id: workspaceId,
-        evidence_id: evidenceId,
-        requirement_id: requirement.id
-      });
+    // 7. Link evidence only when one was supplied.
+    if (hasEvidence) {
+      const { error: linkError } = await supabase
+        .from('compliance_evidence_requirements')
+        .insert({
+          workspace_id: workspaceId,
+          evidence_id: evidenceId,
+          requirement_id: requirement.id
+        });
 
-    if (linkError) {
-      console.error('[REGISTER EVIDENCE LINK ERROR]', linkError);
+      if (linkError) {
+        console.error('[REGISTER EVIDENCE LINK ERROR]', linkError);
 
-      return NextResponse.json(
-        {
-          success: false,
-          requirementSaved: true,
-          requirement,
-          error:
-            'The requirement was saved, but linking its evidence failed. ' +
-            'The requirement remains in the register and can be linked again.'
-        },
-        { status: 500 }
-      );
+        return NextResponse.json(
+          {
+            success: false,
+            requirementSaved: true,
+            requirement,
+            error:
+              'The requirement was saved, but linking its evidence failed. ' +
+              'The requirement remains in the register and can be linked again.'
+          },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Requirement saved and evidence linked.',
+      message: hasEvidence
+        ? 'Requirement saved and evidence linked.'
+        : 'Requirement created successfully.',
       requirement
     });
 
@@ -497,7 +515,14 @@ export async function PATCH(req: Request) {
         );
       }
 
-      if (cleanDeadline && !isValidISODate(cleanDeadline)) {
+      if (!cleanDeadline) {
+        return NextResponse.json(
+          { error: 'A requirement deadline is required.' },
+          { status: 400 }
+        );
+      }
+
+      if (!isValidISODate(cleanDeadline)) {
         return NextResponse.json(
           { error: 'Deadline must use YYYY-MM-DD format.' },
           { status: 400 }
