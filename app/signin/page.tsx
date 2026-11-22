@@ -26,8 +26,6 @@ const isSafeInternalPath = (path: string): boolean => {
 };
 
 export default function SignInPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -38,14 +36,16 @@ export default function SignInPage() {
 
     if (submissionInProgress.current) return;
 
-    const trimmedEmail = email.trim();
+    const formData = new FormData(e.currentTarget);
+    const trimmedEmail = String(formData.get('email') ?? '').trim();
+    const submittedPassword = String(formData.get('password') ?? '');
 
     if (trimmedEmail.length > 254) {
       toast.error('Your email address is too long.');
       return;
     }
 
-    if (password.length > 128) {
+    if (submittedPassword.length > 128) {
       toast.error('Your password must be 128 characters or fewer.');
       return;
     }
@@ -56,7 +56,7 @@ export default function SignInPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
-        password,
+        password: submittedPassword,
       });
 
       if (error) throw error;
@@ -102,12 +102,11 @@ export default function SignInPage() {
           </label>
           <input
             id="email"
+            name="email"
             type="email"
             maxLength={254}
             required
             autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
             placeholder="you@company.com"
             className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10"
           />
@@ -126,12 +125,11 @@ export default function SignInPage() {
           <div className="relative">
             <input
               id="password"
+              name="password"
               type={showPassword ? 'text' : 'password'}
               maxLength={128}
               required
               autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10"
             />
