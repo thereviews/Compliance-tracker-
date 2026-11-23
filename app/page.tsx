@@ -330,7 +330,7 @@ export default function HomePage() {
               Sign in
             </Link>
             <Link href="/signup" className="inline-flex items-center gap-2 rounded-lg bg-[#174b3b] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#103b2e]">
-              Get started <ArrowRight className="h-4 w-4" />
+              Get started for free <ArrowRight className="h-4 w-4" />
             </Link>
             <details className="relative md:hidden">
               <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 text-slate-700">
@@ -370,7 +370,7 @@ export default function HomePage() {
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href="/signup" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#174b3b] px-7 text-sm font-semibold text-white shadow-lg shadow-[#174b3b]/15 transition hover:-translate-y-0.5 hover:bg-[#103b2e]">
-                Get started <ArrowRight className="h-4 w-4" />
+                Get started for free <ArrowRight className="h-4 w-4" />
               </Link>
               <Link href="/features" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-[#dce6de] bg-white px-7 text-sm font-semibold text-[#304b3d] transition hover:border-[#a9c9b3] hover:bg-[#f8fbf8]">
                 Explore features <ChevronRight className="h-4 w-4" />
@@ -471,7 +471,7 @@ export default function HomePage() {
             </p>
           </div>
           <Link href="/signup" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-6 text-sm font-bold text-[#174b3b] transition hover:-translate-y-0.5 hover:bg-[#edf6ef]">
-            Get started <ArrowRight className="h-4 w-4" />
+            Get started for free <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
