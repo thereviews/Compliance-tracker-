@@ -309,7 +309,7 @@ export default function HomePage() {
         }}
       />
 
-      <header className="relative z-20 border-b border-[#edf1ed] bg-white">
+      <header className="sticky top-0 z-50 border-b border-[#edf1ed] bg-white/90 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-8">
           <Brand />
 

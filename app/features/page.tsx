@@ -74,21 +74,7 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      <aside className="relative mt-12 overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-amber-50/50 p-6 shadow-[0_8px_28px_rgba(120,80,20,0.04)] sm:mt-14 sm:p-8">
-        <div className="flex items-start gap-4">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
-            <span className="text-lg font-bold">!</span>
-          </span>
-          <div>
-            <h2 className="text-base font-semibold text-slate-950">
-              Important distinction
-            </h2>
-            <p className="mt-2 text-sm leading-7 text-slate-600">
-              ComplianceTracker is a tracking and organisation tool. It does not provide legal advice, certify compliance or guarantee that a business meets every applicable requirement.
-            </p>
-          </div>
-        </div>
-      </aside>
+
     </PublicPageLayout>
   );
 }

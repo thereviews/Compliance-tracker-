@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Menu, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 export default function PublicPageLayout({
@@ -17,8 +17,8 @@ export default function PublicPageLayout({
     'text-sm font-medium text-slate-600 transition-colors duration-200 hover:text-emerald-800';
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f8fbf9] text-slate-900">
-      <header className="relative z-20 border-b border-emerald-950/[0.07] bg-white/95 shadow-[0_3px_18px_rgba(15,45,32,0.035)]">
+    <main className="min-h-screen overflow-x-clip bg-[#f8fbf9] text-slate-900">
+      <header className="sticky top-0 z-50 border-b border-emerald-950/[0.07] bg-white/90 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex min-h-[76px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-8">
           <Link
             href="/"
@@ -53,18 +53,22 @@ export default function PublicPageLayout({
             >
               Get started <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Link>
+            <details className="relative md:hidden">
+              <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 text-slate-700">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Open navigation</span>
+              </summary>
+              <div className="absolute right-0 top-full mt-2 flex w-48 flex-col rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                <Link className="rounded-lg px-3 py-3 text-sm text-slate-700 hover:bg-slate-50" href="/features">Features</Link>
+                <Link className="rounded-lg px-3 py-3 text-sm text-slate-700 hover:bg-slate-50" href="/how-it-works">How it works</Link>
+                <Link className="rounded-lg px-3 py-3 text-sm text-slate-700 hover:bg-slate-50" href="/about">About</Link>
+                <Link className="rounded-lg px-3 py-3 text-sm text-slate-700 hover:bg-slate-50" href="/faq">FAQs</Link>
+                <Link className="rounded-lg px-3 py-3 text-sm text-slate-700 hover:bg-slate-50" href="/signin">Sign in</Link>
+              </div>
+            </details>
           </div>
         </div>
 
-        <nav
-          className="grid grid-cols-4 border-t border-slate-100 bg-slate-50/80 px-2 py-3 md:hidden"
-          aria-label="Mobile navigation"
-        >
-          <Link className="py-1 text-center text-xs font-semibold text-slate-600 transition-colors hover:text-emerald-800" href="/features">Features</Link>
-          <Link className="py-1 text-center text-xs font-semibold text-slate-600 transition-colors hover:text-emerald-800" href="/how-it-works">How it works</Link>
-          <Link className="py-1 text-center text-xs font-semibold text-slate-600 transition-colors hover:text-emerald-800" href="/about">About</Link>
-          <Link className="py-1 text-center text-xs font-semibold text-slate-600 transition-colors hover:text-emerald-800" href="/faq">FAQs</Link>
-        </nav>
       </header>
 
       <section className="relative isolate overflow-hidden border-b border-emerald-950/[0.06] bg-gradient-to-br from-[#edf7f0] via-[#f7fbf8] to-white px-5 py-16 sm:px-8 sm:py-24">
