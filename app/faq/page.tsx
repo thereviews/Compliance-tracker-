@@ -68,39 +68,39 @@ export default function FAQPage() {
       title="Answers to your compliance tracking questions."
       description="Learn how ComplianceTracker helps your team organise requirements, keep evidence together and stay on top of follow-up work."
     >
-      <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-emerald-800">Help centre</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">Help centre</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
             Common questions
           </h2>
         </div>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm font-medium text-slate-500">
           {questions.length} answers to help you get started
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {questions.map(([question, answer], index) => (
           <details
             key={question}
-            className="group rounded-2xl border border-slate-200 bg-white transition-colors open:border-emerald-200 open:bg-emerald-50/30"
+            className="group overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_5px_22px_rgba(15,45,32,0.035)] transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_12px_30px_rgba(15,75,45,0.07)] open:border-emerald-200 open:bg-gradient-to-br open:from-emerald-50/70 open:to-white open:shadow-[0_10px_30px_rgba(15,75,45,0.06)]"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-5 rounded-2xl px-5 py-5 marker:hidden sm:px-6 [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 marker:hidden sm:gap-5 sm:px-6 sm:py-6 [&::-webkit-details-marker]:hidden">
               <span className="flex items-start gap-4">
-                <span className="mt-0.5 text-xs font-semibold tabular-nums text-emerald-700">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-[11px] font-bold tabular-nums text-emerald-900 transition-colors group-open:bg-emerald-900 group-open:text-white">
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                <span className="text-base font-semibold leading-7 text-slate-900">
+                <span className="text-[15px] font-semibold leading-7 tracking-tight text-slate-900 sm:text-base">
                   {question}
                 </span>
               </span>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-all group-open:rotate-45 group-open:border-emerald-200 group-open:text-emerald-800">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-all duration-200 group-hover:border-emerald-300 group-hover:text-emerald-800 group-open:rotate-45 group-open:border-emerald-300 group-open:bg-emerald-100 group-open:text-emerald-900">
                 <Plus className="h-4 w-4" />
               </span>
             </summary>
-            <div className="px-5 pb-6 pl-14 sm:px-6 sm:pl-[4.25rem]">
-              <p className="max-w-3xl text-[15px] leading-7 text-slate-600">
+            <div className="px-5 pb-6 pl-[4.25rem] sm:px-6 sm:pb-7 sm:pl-[4.75rem]">
+              <p className="max-w-3xl border-l-2 border-emerald-200 pl-4 text-sm leading-7 text-slate-600 sm:text-[15px]">
                 {answer}
               </p>
             </div>
@@ -108,8 +108,8 @@ export default function FAQPage() {
         ))}
       </div>
 
-      <div className="mt-12 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-6 sm:p-8">
-        <h2 className="text-lg font-semibold text-slate-950">
+      <div className="relative mt-12 overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 p-6 shadow-[0_10px_32px_rgba(15,75,45,0.055)] sm:mt-14 sm:p-8">
+        <h2 className="text-xl font-semibold tracking-tight text-slate-950">
           Still have a question?
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
@@ -118,13 +118,13 @@ export default function FAQPage() {
         <div className="mt-5 flex flex-wrap gap-3">
           <a
             href="/features"
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-800"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-md"
           >
             Explore features
           </a>
           <a
             href="/how-it-works"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-900"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:text-emerald-900"
           >
             How it works
           </a>

@@ -1699,7 +1699,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto w-full max-w-7xl flex-1 bg-slate-50 px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:ml-64">
+      <main className="mx-auto w-full max-w-7xl bg-slate-50 px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:ml-64">
         {loading ? (
           <div className="space-y-7" aria-label="Loading workspace" aria-busy="true">
             {activeTab === 'dashboard' && (

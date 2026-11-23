@@ -62,7 +62,7 @@ export default function AboutPage() {
       title="Making compliance work easier to organise."
       description="A practical software workspace for businesses that want a clearer way to manage requirements, supporting records and follow-up work."
     >
-      <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+      <section className="grid gap-8 lg:grid-cols-[1.12fr_0.88fr] lg:items-center">
         <div>
           <p className="text-sm font-semibold text-emerald-800">
             Why ComplianceTracker exists
@@ -80,8 +80,8 @@ export default function AboutPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-6 sm:p-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-950 text-white">
+        <div className="relative overflow-hidden rounded-3xl border border-emerald-100/80 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/70 p-6 shadow-[0_16px_45px_rgba(16,80,52,0.07)] sm:p-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-950 text-white shadow-lg shadow-emerald-950/15">
             <ShieldCheck className="h-6 w-6" />
           </div>
           <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">
@@ -116,9 +116,9 @@ export default function AboutPage() {
             return (
               <article
                 key={principle.title}
-                className="rounded-2xl border border-slate-200 bg-white p-6"
+                className="group rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_5px_22px_rgba(15,45,32,0.035)] transition-all duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_14px_32px_rgba(15,75,45,0.08)]"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 transition-colors group-hover:bg-emerald-900 group-hover:text-white">
                   <Icon className="h-5 w-5" strokeWidth={1.8} />
                 </div>
                 <p className="mt-5 text-xs font-semibold tracking-wider text-emerald-800">
@@ -136,7 +136,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mt-16 grid gap-8 border-t border-slate-100 pt-12 sm:grid-cols-2">
+      <section className="mt-16 grid gap-8 border-t border-slate-200/80 pt-12 sm:grid-cols-2">
         <div>
           <p className="text-sm font-semibold text-emerald-800">
             Who it is for
@@ -149,7 +149,7 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 sm:p-7">
+        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm sm:p-7">
           <h3 className="text-base font-semibold text-slate-950">
             Clear responsibilities matter
           </h3>
@@ -168,7 +168,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mt-14 rounded-2xl border border-amber-200 bg-amber-50/60 p-6 sm:p-8">
+      <section className="mt-14 rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-white p-6 shadow-[0_8px_28px_rgba(120,80,20,0.045)] sm:p-8">
         <h2 className="text-base font-semibold text-slate-950">
           An important distinction
         </h2>
@@ -177,7 +177,7 @@ export default function AboutPage() {
         </p>
       </section>
 
-      <section className="mt-14 flex flex-col gap-5 rounded-2xl bg-slate-950 p-7 text-white sm:flex-row sm:items-center sm:justify-between sm:p-8">
+      <section className="relative mt-14 flex flex-col gap-6 overflow-hidden rounded-3xl border border-emerald-900 bg-gradient-to-br from-emerald-950 via-slate-950 to-[#102b22] p-7 text-white shadow-[0_18px_45px_rgba(10,45,30,0.16)] sm:flex-row sm:items-center sm:justify-between sm:p-9">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">
             Bring your compliance work into one place.
@@ -188,7 +188,7 @@ export default function AboutPage() {
         </div>
         <Link
           href="/signup"
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-50"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white px-5 py-3 text-sm font-semibold text-emerald-950 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-50"
         >
           Get started <ArrowRight className="h-4 w-4" />
         </Link>

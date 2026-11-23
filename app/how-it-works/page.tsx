@@ -81,9 +81,9 @@ export default function HowItWorksPage() {
       title="A clearer way to manage your compliance workflow."
       description="ComplianceTracker is built around the practical work of managing business requirements: record what matters, keep evidence connected, assign follow-up and review progress."
     >
-      <section className="mb-14 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-6 sm:p-8">
+      <section className="relative mb-14 overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/70 p-6 shadow-[0_12px_36px_rgba(15,75,45,0.055)] sm:p-9">
         <div className="flex items-start gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-800 shadow-sm">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-white text-emerald-900 shadow-sm">
             <Workflow className="h-6 w-6" />
           </span>
           <div>
@@ -98,13 +98,13 @@ export default function HowItWorksPage() {
             </p>
           </div>
         </div>
-        <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
-            <div key={step.number} className="flex items-center gap-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-white">
+            <div key={step.number} className="flex min-h-[58px] items-center gap-3 rounded-xl border border-emerald-100/80 bg-white/80 p-3 shadow-sm transition-all hover:border-emerald-200 hover:shadow-md">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-900 text-xs font-bold text-white shadow-sm">
                 {index + 1}
               </span>
-              <span className="text-xs font-semibold leading-5 text-slate-700 sm:text-sm">
+              <span className="text-sm font-semibold leading-5 text-slate-800">
                 {step.title}
               </span>
             </div>
@@ -113,13 +113,13 @@ export default function HowItWorksPage() {
       </section>
 
       <div className="mb-8">
-        <p className="text-sm font-semibold text-emerald-800">Four practical steps</p>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">Four practical steps</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
           How your team uses ComplianceTracker
         </h2>
       </div>
 
-      <div className="relative space-y-5">
+      <div className="relative space-y-5 sm:space-y-6">
         <div className="absolute bottom-10 left-[2.1rem] top-10 hidden w-px bg-emerald-100 sm:block" />
 
         {steps.map((step) => {
@@ -128,30 +128,30 @@ export default function HowItWorksPage() {
           return (
             <section
               key={step.number}
-              className="relative grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 transition-colors hover:border-emerald-200 sm:grid-cols-[76px_1fr] sm:gap-6 sm:p-7"
+              className="group relative grid gap-5 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_5px_24px_rgba(15,45,32,0.035)] transition-all duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_14px_34px_rgba(15,75,45,0.075)] sm:grid-cols-[76px_1fr] sm:gap-6 sm:p-7"
             >
-              <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-950 text-white shadow-sm">
+              <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-white shadow-md transition-transform duration-200 group-hover:scale-105">
                 <Icon className="h-6 w-6" strokeWidth={1.8} />
               </div>
 
               <div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-xs font-bold tracking-wider text-emerald-800">
+                  <span className="text-[11px] font-bold tracking-[0.16em] text-emerald-800">
                     STEP {step.number}
                   </span>
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
+                  <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900">
                     {step.label}
                   </span>
                 </div>
 
-                <h3 className="mt-3 text-xl font-semibold tracking-tight text-slate-950">
+                <h3 className="mt-3 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
                   {step.title}
                 </h3>
-                <p className="mt-3 max-w-3xl text-[15px] leading-7 text-slate-600">
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-[15px]">
                   {step.description}
                 </p>
 
-                <div className="mt-5 flex items-start gap-2 border-t border-slate-100 pt-4">
+                <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-100/80 bg-emerald-50/50 p-4">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
                   <p className="text-sm leading-6 text-slate-600">
                     <span className="font-semibold text-slate-800">The result: </span>
@@ -164,7 +164,7 @@ export default function HowItWorksPage() {
         })}
       </div>
 
-      <section className="mt-14 grid gap-7 rounded-2xl bg-slate-950 p-7 text-white sm:grid-cols-[1fr_auto] sm:items-center sm:p-9">
+      <section className="relative mt-14 grid gap-7 overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-7 text-white shadow-[0_18px_45px_rgba(15,35,28,0.16)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-10">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">
             One connected workspace
@@ -178,7 +178,7 @@ export default function HowItWorksPage() {
         </div>
         <Link
           href="/signup"
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-50"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white px-6 py-3 text-sm font-semibold text-emerald-950 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md"
         >
           Get started <ArrowRight className="h-4 w-4" />
         </Link>

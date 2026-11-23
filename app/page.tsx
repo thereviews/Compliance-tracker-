@@ -292,7 +292,7 @@ const features = [
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-white text-[#20352d]">
+    <main className="home-page min-h-screen overflow-hidden bg-white text-[#20352d]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
