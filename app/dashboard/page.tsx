@@ -94,6 +94,48 @@ export default function Dashboard() {
   const workspaceDataRequest = useRef(0);
   const teamMembersRequest = useRef(0);
   const workspaceInitialization = useRef<Promise<void> | null>(null);
+  const workspaceDataCache = useRef(
+    new Map<string, { data: any[]; cachedAt: number }>()
+  );
+
+  const WORKSPACE_CACHE_TTL = 20_000;
+
+  const getCachedWorkspaceSection = (
+    wsId: string,
+    section: 'requirements' | 'evidence' | 'actions'
+  ): any[] | null => {
+    const key = `${wsId}:${section}`;
+    const cached = workspaceDataCache.current.get(key);
+
+    if (!cached) return null;
+
+    if (Date.now() - cached.cachedAt > WORKSPACE_CACHE_TTL) {
+      workspaceDataCache.current.delete(key);
+      return null;
+    }
+
+    return cached.data;
+  };
+
+  const setCachedWorkspaceSection = (
+    wsId: string,
+    section: 'requirements' | 'evidence' | 'actions',
+    data: any[]
+  ) => {
+    workspaceDataCache.current.set(`${wsId}:${section}`, {
+      data,
+      cachedAt: Date.now()
+    });
+  };
+
+  const invalidateWorkspaceCache = (
+    wsId: string,
+    ...sections: Array<'requirements' | 'evidence' | 'actions'>
+  ) => {
+    sections.forEach((section) => {
+      workspaceDataCache.current.delete(`${wsId}:${section}`);
+    });
+  };
 
   useEffect(() => {
     if (!workspaceInitialization.current) {
@@ -671,9 +713,9 @@ export default function Dashboard() {
       'actions'
     ]
   ) => {
-    const shouldLoadRequirements = sections.includes('requirements');
-    const shouldLoadEvidence = sections.includes('evidence');
-    const shouldLoadActions = sections.includes('actions');
+    let shouldLoadRequirements = sections.includes('requirements');
+    let shouldLoadEvidence = sections.includes('evidence');
+    let shouldLoadActions = sections.includes('actions');
 
     const isFullLoad =
       shouldLoadRequirements && shouldLoadEvidence && shouldLoadActions;
@@ -688,6 +730,39 @@ export default function Dashboard() {
       workspaceDataRequest.current === requestId;
 
     try {
+      const cachedRequirements = shouldLoadRequirements
+        ? getCachedWorkspaceSection(wsId, 'requirements')
+        : null;
+      const cachedEvidence = shouldLoadEvidence
+        ? getCachedWorkspaceSection(wsId, 'evidence')
+        : null;
+      const cachedActions = shouldLoadActions
+        ? getCachedWorkspaceSection(wsId, 'actions')
+        : null;
+
+      if (cachedRequirements !== null) {
+        setRequirements(cachedRequirements);
+        shouldLoadRequirements = false;
+      }
+
+      if (cachedEvidence !== null) {
+        setEvidence(cachedEvidence);
+        shouldLoadEvidence = false;
+      }
+
+      if (cachedActions !== null) {
+        setActions(cachedActions);
+        shouldLoadActions = false;
+      }
+
+      if (
+        isFullLoad &&
+        !shouldLoadRequirements &&
+        !shouldLoadEvidence &&
+        !shouldLoadActions
+      ) {
+        return;
+      }
       const headers =
         shouldLoadRequirements || shouldLoadActions
           ? await getAuthHeaders()
@@ -713,9 +788,11 @@ export default function Dashboard() {
             }
 
             if (!isCurrentRequest()) return;
-            setRequirements(
-              Array.isArray(result.requirements) ? result.requirements : []
-            );
+            const loadedRequirements = Array.isArray(result.requirements)
+              ? result.requirements
+              : [];
+            setCachedWorkspaceSection(wsId, 'requirements', loadedRequirements);
+            setRequirements(loadedRequirements);
           } catch (error) {
             if (!isCurrentRequest()) return;
             console.error('Register loading error:', error);
@@ -740,7 +817,9 @@ export default function Dashboard() {
             if (!isCurrentRequest()) return;
             if (evidenceRes.error) throw evidenceRes.error;
 
-            setEvidence(evidenceRes.data || []);
+            const loadedEvidence = evidenceRes.data || [];
+            setCachedWorkspaceSection(wsId, 'evidence', loadedEvidence);
+            setEvidence(loadedEvidence);
           } catch (error) {
             if (!isCurrentRequest()) return;
             console.error('Evidence loading error:', error);
@@ -763,9 +842,11 @@ export default function Dashboard() {
             }
 
             if (!isCurrentRequest()) return;
-            setActions(
-              Array.isArray(result.actions) ? result.actions : []
-            );
+            const loadedActions = Array.isArray(result.actions)
+              ? result.actions
+              : [];
+            setCachedWorkspaceSection(wsId, 'actions', loadedActions);
+            setActions(loadedActions);
           } catch (error) {
             if (!isCurrentRequest()) return;
             console.error('Actions loading error:', error);
@@ -828,6 +909,8 @@ export default function Dashboard() {
       if (!response.ok || !result.success) {
         throw new Error(result.error || (isEditing ? 'Could not update action.' : 'Could not create action.'));
       }
+
+      invalidateWorkspaceCache(workspace.id, 'actions');
 
       if (isEditing) {
         setActions((current) =>
@@ -894,6 +977,7 @@ export default function Dashboard() {
         throw new Error(result.error || 'Could not delete action.');
       }
 
+      invalidateWorkspaceCache(workspace.id, 'actions');
       setActions((current) => current.filter((action) => action.id !== actionId));
 
       if (editingActionId === actionId) {
@@ -935,12 +1019,12 @@ export default function Dashboard() {
         throw new Error(result.details || result.error || 'Could not update action.');
       }
 
+      invalidateWorkspaceCache(workspace.id, 'actions');
       setActions((current) =>
         current.map((action) =>
           action.id === actionId ? result.action : action
         )
       );
-
 
       toast.success('Action status updated.');
     } catch (error: any) {
@@ -986,6 +1070,7 @@ export default function Dashboard() {
         throw new Error(result.error || 'Could not delete evidence document.');
       }
 
+      invalidateWorkspaceCache(workspace.id, 'evidence');
       await loadWorkspaceData(workspace.id, ['evidence']);
 
       if (result.storageDeleted === false) {
@@ -1079,6 +1164,7 @@ export default function Dashboard() {
         throw new Error(result.details || result.error || 'Could not save requirement.');
       }
 
+      invalidateWorkspaceCache(workspace.id, 'requirements');
       await loadWorkspaceData(workspace.id, ['requirements']);
       cancelEditRequirement();
       toast.success(
@@ -1133,6 +1219,12 @@ export default function Dashboard() {
         cancelEditRequirement();
       }
 
+      invalidateWorkspaceCache(
+        workspace.id,
+        'requirements',
+        'evidence',
+        'actions'
+      );
       await loadWorkspaceData(workspace.id, ['requirements', 'evidence', 'actions']);
       toast.success('Requirement and linked records deleted.');
     } catch (error: any) {
@@ -1180,6 +1272,7 @@ export default function Dashboard() {
         )
       );
 
+      invalidateWorkspaceCache(workspace.id, 'requirements');
       await loadWorkspaceData(workspace.id, ['requirements']);
       toast.success('Requirement status updated.');
     } catch (error: any) {
@@ -4247,7 +4340,10 @@ export default function Dashboard() {
           isOpen={isUploadOpen}
           workspaceId={workspace.id}
           onClose={() => setIsUploadOpen(false)}
-          onSuccess={() => loadWorkspaceData(workspace.id, ['evidence'])}
+          onSuccess={() => {
+            invalidateWorkspaceCache(workspace.id, 'evidence');
+            return loadWorkspaceData(workspace.id, ['evidence']);
+          }}
         />
       )}
     </div>

@@ -307,7 +307,7 @@ body {
 .home-page > section:nth-of-type(4) {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(115deg, #153d31, #1d5541);
+  background: #f8faf8;
 }
 
 .home-page > section:nth-of-type(4)::before {
