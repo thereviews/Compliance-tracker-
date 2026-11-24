@@ -11,12 +11,14 @@ import {
 import PublicPageLayout from '../components/PublicPageLayout';
 
 export const metadata: Metadata = {
-  title: 'About ComplianceTracker | Business Compliance Software',
+  title: 'About ComplianceTracker: Business Compliance Tracker',
   description:
-    'Discover ComplianceTracker, a practical workspace that helps businesses organise compliance requirements, supporting evidence, corrective actions and review dates.',
+    'Learn about ComplianceTracker, a business compliance tracker for organising requirements, assigning responsibilities, managing evidence and following up on outstanding actions.',
   alternates: { canonical: '/about' },
   keywords: [
     'about ComplianceTracker',
+    'business compliance tracker',
+    'compliance tracking software',
     'business compliance software',
     'compliance tracking tool',
   ],
@@ -59,8 +61,8 @@ export default function AboutPage() {
   return (
     <PublicPageLayout
       eyebrow="About ComplianceTracker"
-      title="Making compliance work easier to organise."
-      description="A practical software workspace for businesses that want a clearer way to manage requirements, supporting records and follow-up work."
+      title="A clearer way to organise business compliance tracking."
+      description="ComplianceTracker helps businesses organise compliance requirements, assign owners, connect supporting evidence and keep track of reviews and follow-up actions."
     >
       <section className="grid gap-8 lg:grid-cols-[1.12fr_0.88fr] lg:items-center">
         <div>
@@ -72,10 +74,10 @@ export default function AboutPage() {
           </h2>
           <div className="mt-5 space-y-4 text-[15px] leading-8 text-slate-600">
             <p>
-              Compliance work can become difficult to coordinate when requirements live in spreadsheets, evidence is stored in separate folders and follow-up actions are tracked in different places.
+              Business compliance work often involves several connected responsibilities. Requirements may be recorded in spreadsheets, supporting evidence stored in separate folders, and follow-up actions managed through emails or task lists. As the number of records and people involved grows, keeping everything coordinated can become increasingly difficult.
             </p>
             <p>
-              It can be hard to see who is responsible, what has been completed and what needs attention next. ComplianceTracker is designed to bring these connected activities into one organised workspace.
+              This can make it harder to see who is responsible for each requirement, whether supporting evidence is available, when a record should be reviewed and which actions remain outstanding. ComplianceTracker is designed to bring these activities together in one organised workspace, giving teams a clearer view of their recorded compliance work.
             </p>
           </div>
         </div>
@@ -136,6 +138,70 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <section className="mt-16 border-t border-slate-100 pt-12">
+        <div className="max-w-3xl">
+          <p className="text-sm font-semibold text-emerald-800">
+            What the workspace brings together
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            Connect requirements, evidence, people and follow-up.
+          </h2>
+          <p className="mt-4 text-[15px] leading-8 text-slate-600">
+            A useful compliance tracker should help a team understand not
+            only which requirements it has recorded, but also who is
+            responsible, what supporting information is available and what
+            needs to happen next. ComplianceTracker is organised around
+            these practical parts of the workflow.
+          </p>
+        </div>
+
+        <div className="mt-7 grid gap-5 md:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6">
+            <h3 className="text-base font-semibold text-slate-950">
+              A clearer record of requirements
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Keep recorded requirements together with their categories,
+              statuses, assigned owners and review dates. This gives teams
+              a consistent place to check the information they maintain.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6">
+            <h3 className="text-base font-semibold text-slate-950">
+              Evidence linked to the work
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Keep supporting documents associated with relevant records
+              so that policies, procedures, certificates and other evidence
+              are easier to find when reviewing progress.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6">
+            <h3 className="text-base font-semibold text-slate-950">
+              Ownership and corrective actions
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Make follow-up work more visible by recording actions,
+              assigning responsibility and tracking due dates and status.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6">
+            <h3 className="text-base font-semibold text-slate-950">
+              Ongoing reviews and progress
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Use recorded statuses, review dates and reports to help
+              identify outstanding work and support regular team reviews.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-6 text-sm leading-7 text-slate-600">
+          See the <Link href="/features" className="font-semibold text-emerald-800 underline underline-offset-4 hover:text-emerald-950">ComplianceTracker features</Link> or read
+          <Link href="/how-it-works" className="ml-1 font-semibold text-emerald-800 underline underline-offset-4 hover:text-emerald-950">how the compliance tracking workflow works</Link>.
+        </p>
+      </section>
+
       <section className="mt-16 grid gap-8 border-t border-slate-200/80 pt-12 sm:grid-cols-2">
         <div>
           <p className="text-sm font-semibold text-emerald-800">
@@ -190,7 +256,7 @@ export default function AboutPage() {
           href="/signup"
           className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white px-5 py-3 text-sm font-semibold text-emerald-950 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-50"
         >
-          Get started <ArrowRight className="h-4 w-4" />
+          Get started for free <ArrowRight className="h-4 w-4" />
         </Link>
       </section>
     </PublicPageLayout>

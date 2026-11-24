@@ -12,65 +12,95 @@ import {
 import PublicPageLayout from '../components/PublicPageLayout';
 
 export const metadata: Metadata = {
-  title: 'How Compliance Tracking Works | ComplianceTracker',
+  title: 'How Compliance Tracking Works: A Business Guide | ComplianceTracker',
   description:
-    'Learn how to record business compliance requirements, connect evidence, assign corrective actions and monitor review dates with ComplianceTracker.',
+    'Learn how business compliance tracking works, from recording requirements and assigning owners to organising evidence, following corrective actions and reviewing progress.',
   alternates: { canonical: '/how-it-works' },
   keywords: [
     'how compliance tracking works',
     'business compliance tracking',
     'compliance tracking process',
+    'how to track business compliance',
+    'compliance tracking software',
   ],
   openGraph: {
-    title: 'How Compliance Tracking Works | ComplianceTracker',
+    title: 'How Compliance Tracking Works: A Business Guide | ComplianceTracker',
     description:
-      'Follow a practical workflow for recording requirements, keeping evidence, assigning actions and reviewing progress.',
+      'Understand the practical compliance tracking process: record requirements, assign responsibility, connect evidence and review outstanding work.',
     url: '/how-it-works',
     type: 'website',
   },
   twitter: {
     card: 'summary',
     title: 'How Compliance Tracking Works | ComplianceTracker',
-    description: 'See how ComplianceTracker helps teams organise requirements, evidence and follow-up work.',
+    description:
+      'Follow a practical process for organising business requirements, evidence, corrective actions and review dates.',
   },
 };
 
 const steps = [
   {
     number: '01',
-    label: 'Start with clarity',
-    title: 'Record the requirements',
+    label: 'Build your register',
+    title: 'Record the requirements your business needs to track',
     description:
-      'Add the business requirements you need to track. Record their status, responsible person and relevant review dates.',
-    outcome: 'A structured register of the work your business needs to monitor.',
+      'Start by identifying the obligations and internal requirements relevant to your organisation. Add each item to your compliance register with a useful description, category, current status, responsible person and review date.',
+    outcome:
+      'A central register that gives your team a structured view of the requirements being monitored.',
     icon: ClipboardList,
   },
   {
     number: '02',
-    label: 'Keep the context',
-    title: 'Keep supporting evidence together',
+    label: 'Organise your records',
+    title: 'Connect documents and supporting evidence',
     description:
-      'Upload documents and connect them to relevant register entries so supporting information is easier to find.',
-    outcome: 'Supporting documents connected to the relevant requirements.',
+      'Upload relevant policies, procedures, certificates, training records and other supporting files. Associate each document with the compliance record it relates to, so your team can find the context behind a requirement.',
+    outcome:
+      'Supporting documents organised alongside the requirements they help demonstrate or explain.',
     icon: FileCheck2,
   },
   {
     number: '03',
-    label: 'Move work forward',
-    title: 'Assign and follow up on actions',
+    label: 'Manage follow-up',
+    title: 'Assign corrective actions and track progress',
     description:
-      'Create corrective actions, assign responsibility and monitor progress as your team addresses outstanding work.',
-    outcome: 'Follow-up work with a clear owner and trackable progress.',
+      'When a requirement needs attention, create a corrective action or follow-up task. Assign an owner, set a due date and update its status as work progresses, giving outstanding items a clear next step.',
+    outcome:
+      'Follow-up work with visible ownership, deadlines and progress.',
     icon: ListChecks,
   },
   {
     number: '04',
-    label: 'Stay informed',
-    title: 'Review status and progress',
+    label: 'Review your position',
+    title: 'Monitor compliance status and outstanding work',
     description:
-      'Use reports and your workspace overview to identify outstanding work and keep upcoming dates in view.',
-    outcome: 'A clearer view of current status and what needs attention.',
+      'Use workspace summaries and compliance reports to review recorded statuses, identify items needing attention and keep upcoming review dates in view. Regular reviews help your team decide what needs to happen next.',
+    outcome:
+      'A more organised view of recorded progress, upcoming reviews and outstanding tasks.',
     icon: ChartNoAxesCombined,
+  },
+];
+
+const trackingBenefits = [
+  {
+    title: 'Clear responsibility',
+    body:
+      'Record who is responsible for a requirement or follow-up action, making ownership easier to understand across the team.',
+  },
+  {
+    title: 'Connected documentation',
+    body:
+      'Keep supporting files associated with relevant records instead of searching through unrelated folders and lists.',
+  },
+  {
+    title: 'Visible follow-up',
+    body:
+      'Use statuses and due dates to see which actions are underway and which items may need attention.',
+  },
+  {
+    title: 'More structured reviews',
+    body:
+      'Bring register records, evidence and outstanding work into a process your team can review regularly.',
   },
 ];
 
@@ -78,8 +108,8 @@ export default function HowItWorksPage() {
   return (
     <PublicPageLayout
       eyebrow="How it works"
-      title="A clearer way to manage your compliance workflow."
-      description="ComplianceTracker is built around the practical work of managing business requirements: record what matters, keep evidence connected, assign follow-up and review progress."
+      title="How to track business compliance with a clear, practical workflow"
+      description="ComplianceTracker helps businesses organise the everyday work of compliance tracking. Record relevant requirements, assign responsibility, connect supporting evidence, manage corrective actions and review progress from one shared workspace."
     >
       <section className="relative mb-14 overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/70 p-6 shadow-[0_12px_36px_rgba(15,75,45,0.055)] sm:p-9">
         <div className="flex items-start gap-4">
@@ -94,7 +124,7 @@ export default function HowItWorksPage() {
               From requirements to informed follow-up.
             </h2>
             <p className="mt-2 text-sm leading-7 text-slate-600">
-              Keep the key parts of your compliance process connected in one shared workspace.
+              Connect the records, people, documents and actions involved in your business compliance process.
             </p>
           </div>
         </div>
@@ -113,10 +143,15 @@ export default function HowItWorksPage() {
       </section>
 
       <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">Four practical steps</p>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">
+          Four practical steps
+        </p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-          How your team uses ComplianceTracker
+          The business compliance tracking process
         </h2>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-[15px]">
+          Each stage builds on the previous one. Together, they help your team maintain organised records and keep track of work that still needs attention.
+        </p>
       </div>
 
       <div className="relative space-y-5 sm:space-y-6">
@@ -164,6 +199,49 @@ export default function HowItWorksPage() {
         })}
       </div>
 
+      <section className="mt-20 border-t border-slate-200 pt-16" aria-labelledby="tracking-benefits-heading">
+        <div className="max-w-3xl">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">
+            Why use a structured process?
+          </p>
+          <h2 id="tracking-benefits-heading" className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            What good compliance tracking helps your team manage
+          </h2>
+          <p className="mt-4 text-[15px] leading-7 text-slate-600">
+            When compliance information is spread across spreadsheets, email and separate document folders, it can be difficult to understand the current position. A structured tracking process brings important records and follow-up work into a more consistent view.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+          {trackingBenefits.map((benefit) => (
+            <article key={benefit.title} className="rounded-2xl border border-slate-200/80 bg-white p-6">
+              <h3 className="text-lg font-semibold text-slate-950">{benefit.title}</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{benefit.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-20 border-t border-slate-200 pt-16" aria-labelledby="getting-started-heading">
+        <div className="max-w-3xl">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">
+            Getting started
+          </p>
+          <h2 id="getting-started-heading" className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            Start with the requirements that matter to your business
+          </h2>
+          <p className="mt-4 text-[15px] leading-7 text-slate-600">
+            Begin by identifying the legal, regulatory, contractual and internal requirements relevant to your organisation. Add the items you want to monitor, decide who is responsible and establish a review routine that fits your business.
+          </p>
+          <p className="mt-4 text-[15px] leading-7 text-slate-600">
+            ComplianceTracker provides a place to organise and monitor the records your team creates. It does not determine which laws apply to your business or replace professional compliance advice.
+          </p>
+          <p className="mt-5 text-sm leading-7 text-slate-600">
+            Explore the <Link href="/features" className="font-semibold text-emerald-800 underline decoration-emerald-300 underline-offset-4 hover:text-emerald-950">compliance tracker features</Link> to see what you can manage, or visit the <Link href="/faq" className="font-semibold text-emerald-800 underline decoration-emerald-300 underline-offset-4 hover:text-emerald-950">frequently asked questions</Link> for more details.
+          </p>
+        </div>
+      </section>
+
       <section className="relative mt-14 grid gap-7 overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-7 text-white shadow-[0_18px_45px_rgba(15,35,28,0.16)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-10">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">
@@ -173,14 +251,14 @@ export default function HowItWorksPage() {
             Keep the work connected, from start to follow-up.
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-            Instead of separating requirements, documents and follow-up into disconnected lists, ComplianceTracker gives your team a shared workspace for the records and actions involved in its compliance process.
+            Bring requirements, supporting documents and follow-up actions into a shared workspace. Give your team a clearer way to organise records and review the work that remains outstanding.
           </p>
         </div>
         <Link
           href="/signup"
           className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white px-6 py-3 text-sm font-semibold text-emerald-950 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md"
         >
-          Get started <ArrowRight className="h-4 w-4" />
+          Get started for free <ArrowRight className="h-4 w-4" />
         </Link>
       </section>
     </PublicPageLayout>

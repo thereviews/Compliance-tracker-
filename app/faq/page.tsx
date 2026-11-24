@@ -3,61 +3,86 @@ import { Plus } from 'lucide-react';
 import PublicPageLayout from '../components/PublicPageLayout';
 
 export const metadata: Metadata = {
-  title: 'Compliance Tracker FAQs | ComplianceTracker',
-  description:
-    'Find answers about compliance tracker software, compliance registers, evidence uploads, corrective actions, team access and business compliance tracking.',
+  title: 'Compliance Tracker FAQs for Businesses | ComplianceTracker',
+  description: 'Get answers about business compliance tracking, requirements, evidence management, corrective actions, team access, review dates, reminders and reports.',
   alternates: { canonical: '/faq' },
   keywords: [
     'compliance tracker FAQ',
+    'business compliance tracking questions',
     'compliance tracking software questions',
     'compliance register questions',
+    'compliance evidence tracking',
+    'corrective action tracking',
   ],
   openGraph: {
     title: 'Compliance Tracker FAQs | ComplianceTracker',
-    description:
-      'Answers about compliance tracking, evidence, corrective actions and using ComplianceTracker with a team.',
+    description: 'Answers about business compliance tracking, evidence, corrective actions and team workflows in ComplianceTracker.',
     url: '/faq',
     type: 'website',
   },
   twitter: {
     card: 'summary',
     title: 'Compliance Tracker FAQs | ComplianceTracker',
-    description: 'Get answers about compliance tracker software and its features.',
+    description: 'Find answers about compliance tracker software and organising business compliance work.',
   },
 };
 
 const questions = [
   [
     'What is compliance tracker software?',
-    'It helps a business record the requirements it needs to monitor, track status and responsibility, organise supporting evidence and follow up on outstanding work.',
+    'Compliance tracker software gives a business a structured place to record the requirements it wants to monitor, assign responsibility, track status, organise supporting evidence and follow up on outstanding work. It helps bring these related activities together instead of relying on disconnected records and task lists.',
   ],
   [
     'What can I track with ComplianceTracker?',
-    'You can record business requirements, their status, responsible people and review dates, then organise related evidence and corrective actions.',
+    'You can record business requirements, categorise them, assign responsible people, update their status and set review dates. You can also connect supporting documents, manage corrective actions and use reports to review recorded progress.',
   ],
   [
-    'Can I upload supporting documents?',
-    'Yes. You can upload supporting documents and associate evidence with compliance records so the material is easier to find in context.',
+    'Who is ComplianceTracker designed for?',
+    'ComplianceTracker is designed for businesses and teams that need a more organised way to coordinate ongoing compliance work. It can help teams keep track of requirements, supporting records, responsibilities and follow-up activities in a shared workspace.',
   ],
   [
-    'Can I assign work to team members?',
-    'Yes. You can invite people into a shared workspace and assign responsibility for requirements and corrective actions. Workspace roles and permissions help manage who can change records.',
+    'Can I use it to track internal policies and procedures?',
+    'Yes. You can record relevant internal requirements, such as policies, procedures and other business standards, alongside the external requirements your business has identified. Your team remains responsible for deciding what needs to be recorded.',
+  ],
+  [
+    'Can I upload supporting documents and evidence?',
+    'Yes. You can upload supporting documents and associate evidence with relevant compliance records. This helps keep policies, procedures, certificates and other supporting material connected to the work they relate to.',
+  ],
+  [
+    'Can I assign requirements to team members?',
+    'Yes. You can use a shared workspace to coordinate work with team members and assign responsibility for requirements and corrective actions. Workspace roles and permissions help manage access and changes.',
   ],
   [
     'Can I track corrective actions?',
-    'Yes. You can create corrective actions, assign responsibility and monitor progress as your team follows up on outstanding work.',
+    'Yes. You can create corrective actions, assign responsibility, set due dates and monitor their status. This gives your team a place to record follow-up work and review what remains outstanding.',
   ],
   [
-    'Does ComplianceTracker tell me which laws apply to my business?',
-    'No. Your business is responsible for identifying the laws, regulations and other requirements that apply to its activities.',
+    'Can I track review dates and upcoming deadlines?',
+    'Yes. Compliance records can include review dates so your team can keep track of when information should be checked again. ComplianceTracker also supports reminders to help bring upcoming reviews and deadlines to your attention.',
   ],
   [
-    'Does using the software guarantee compliance?',
-    'No. The software helps organise records and track work, but it cannot guarantee compliance or replace professional advice, audits or certification.',
+    'Can I see the progress of our compliance work?',
+    'ComplianceTracker includes reports that help you review recorded requirement statuses and identify work that may need attention. The information reflects the records your team maintains in the workspace.',
   ],
   [
     'Can more than one person use a workspace?',
-    'Yes. ComplianceTracker supports shared workspaces and invitations for team members, with workspace roles and permissions.',
+    'Yes. ComplianceTracker supports shared workspaces and team member invitations, with workspace roles and permissions. This helps people coordinate responsibilities while managing who can access or change records.',
+  ],
+  [
+    'Does ComplianceTracker tell me which laws apply to my business?',
+    'No. Your business is responsible for identifying the laws, regulations, contractual obligations and other requirements that apply to its activities. ComplianceTracker helps you record and track the requirements you identify; it does not determine which ones apply.',
+  ],
+  [
+    'Does using ComplianceTracker guarantee that my business is compliant?',
+    'No. The software helps organise records and track compliance-related work, but it cannot guarantee that a business meets every applicable requirement. It does not replace qualified legal or compliance advice, independent audits or certification.',
+  ],
+  [
+    'Can ComplianceTracker replace our existing spreadsheets?',
+    'It can provide a more structured workspace for tracking requirements, evidence, responsibilities and follow-up actions. Whether you move away from spreadsheets entirely depends on your business processes and how your team chooses to use the software.',
+  ],
+  [
+    'How do I get started with ComplianceTracker?',
+    'Start by identifying the requirements your business wants to track. Add them to your compliance register, assign responsible people, record review dates and attach relevant supporting evidence. You can then use corrective actions and reports to help manage follow-up and review progress.',
   ],
 ];
 
@@ -66,7 +91,7 @@ export default function FAQPage() {
     <PublicPageLayout
       eyebrow="Frequently asked questions"
       title="Answers to your compliance tracking questions."
-      description="Learn how ComplianceTracker helps your team organise requirements, keep evidence together and stay on top of follow-up work."
+      description="Find out how ComplianceTracker helps businesses record requirements, organise evidence, assign responsibility, manage follow-up actions and review progress."
     >
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
