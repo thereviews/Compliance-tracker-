@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, getAuthHeaders } from '@/lib/supabase-client';
-import { ShieldCheck, Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
+import AuthLayout from '@/components/auth/AuthLayout';
 
 export default function InvitationPage() {
   const router = useRouter();
@@ -205,147 +206,213 @@ export default function InvitationPage() {
   };
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center shadow-2xl">
-        <div className="flex justify-center mb-5">
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
-            <ShieldCheck className="w-8 h-8" />
-          </div>
-        </div>
+    <AuthLayout>
+      <div className="mb-7">
+        <p className="mb-3 text-sm font-semibold text-emerald-700">
+          Workspace invitation
+        </p>
 
-        <h1 className="text-2xl font-bold mb-2">
-          ComplianceTracker
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">
+          {status === 'loading' && 'Checking your invitation'}
+          {status === 'register' && 'Join your workspace'}
+          {status === 'sign-in' && 'Sign in to accept invitation'}
+          {status === 'confirmation-sent' && 'Check your email'}
+          {status === 'success' && "You're part of the workspace"}
+          {status === 'error' && 'Invitation unavailable'}
         </h1>
 
-        {status === 'loading' && (
-          <>
-            <Loader2 className="w-7 h-7 animate-spin text-emerald-400 mx-auto my-6" />
-            <p className="text-sm text-zinc-400">
-              Verifying your invitation...
-            </p>
-          </>
-        )}
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          {status === 'loading' && 'Please wait while we verify your invitation link.'}
+          {status === 'register' && 'You have been invited to join a workspace. Create your account to continue.'}
+          {status === 'sign-in' && 'Sign in with the account associated with this invitation.'}
+          {status === 'confirmation-sent' && 'Your account registration has been submitted.'}
+          {status === 'success' && 'Your invitation has been accepted successfully.'}
+          {status === 'error' && 'We could not complete this invitation.'}
+        </p>
+      </div>
 
-        {status === 'register' && (
-          <>
-            <Mail className="w-8 h-8 text-emerald-400 mx-auto my-6" />
-            <p className="text-zinc-300 mb-5">
-              You have been invited to join a workspace. Create your account to continue.
+      {status === 'loading' && (
+        <div className="flex flex-col items-center rounded-xl border border-slate-100 bg-slate-50 px-5 py-8 text-center">
+          <Loader2 className="mb-3 h-8 w-8 animate-spin text-emerald-700" />
+          <p className="text-sm font-medium text-slate-700">
+            Verifying invitation...
+          </p>
+        </div>
+      )}
+
+      {status === 'register' && (
+        <>
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
+            <Mail className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+            <p className="text-sm leading-6 text-slate-600">
+              Complete the form below to create your account and join the invited workspace.
             </p>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void submitRegistration();
-              }}
-              className="space-y-4 text-left"
-            >
-              <div>
-                <label htmlFor="invite-name" className="block text-sm text-zinc-300 mb-2">
-                  Your name
-                </label>
-                <input
-                  id="invite-name"
-                  type="text"
-                  autoComplete="name"
-                  maxLength={100}
-                  required
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 outline-none focus:border-emerald-500"
-                  placeholder="Your name"
-                />
-              </div>
-              <div>
-                <label htmlFor="invite-password" className="block text-sm text-zinc-300 mb-2">
-                  Choose a password
-                </label>
-                <input
-                  id="invite-password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={6}
-                  maxLength={128}
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 outline-none focus:border-emerald-500"
-                  placeholder="At least 6 characters"
-                />
-              </div>
-              {message && (
-                <p className="text-sm text-rose-300">{message}</p>
-              )}
-              <button
-                type="submit"
-                disabled={registrationBusy}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-zinc-950 font-semibold py-3 rounded-xl"
+          </div>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitRegistration();
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label
+                htmlFor="invite-name"
+                className="mb-2 block text-sm font-medium text-slate-700"
               >
-                {registrationBusy ? 'Submitting...' : 'Create Account & Continue'}
-              </button>
-            </form>
-            <p className="text-sm text-zinc-400 mt-6">
+                Full name
+              </label>
+              <input
+                id="invite-name"
+                type="text"
+                autoComplete="name"
+                maxLength={100}
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Enter your name"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="invite-password"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Password
+              </label>
+              <input
+                id="invite-password"
+                type="password"
+                autoComplete="new-password"
+                minLength={6}
+                maxLength={128}
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Create a password"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10"
+              />
+              <p className="mt-1.5 text-xs text-slate-400">
+                Use at least 6 characters.
+              </p>
+            </div>
+
+            {message && (
+              <p
+                role="alert"
+                className="rounded-lg border border-rose-100 bg-rose-50 px-3.5 py-3 text-sm text-rose-700"
+              >
+                {message}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={registrationBusy}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-600/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {registrationBusy ? 'Creating account...' : 'Create account & continue'}
+              {!registrationBusy && <ArrowRight className="h-4 w-4" />}
+            </button>
+          </form>
+
+          <div className="mt-7 border-t border-slate-100 pt-6 text-center">
+            <p className="text-sm text-slate-500">
               Already have an account?
             </p>
             <button
+              type="button"
               onClick={goToSignIn}
-              className="text-emerald-400 hover:text-emerald-300 font-medium mt-2"
+              className="mt-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
             >
               Sign in to accept invitation
             </button>
-          </>
-        )}
+          </div>
+        </>
+      )}
 
-        {status === 'confirmation-sent' && (
-          <>
-            <Mail className="w-10 h-10 text-emerald-400 mx-auto my-6" />
-            <p className="text-zinc-300 mb-4">{message}</p>
-            <p className="text-sm text-zinc-400">
-              Open the confirmation email and follow its link. You will return here to finish joining the workspace.
-            </p>
-          </>
-        )}
+      {status === 'confirmation-sent' && (
+        <div className="space-y-5">
+          <div className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
+            <Mail className="mt-0.5 h-6 w-6 shrink-0 text-emerald-700" />
+            <div>
+              <p className="text-sm font-semibold text-slate-800">
+                Confirmation email sent
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                {message}
+              </p>
+            </div>
+          </div>
 
-        {status === 'sign-in' && (
-          <>
-            <Mail className="w-8 h-8 text-emerald-400 mx-auto my-6" />
-            <p className="text-zinc-300 mb-6">
+          <p className="text-sm leading-6 text-slate-500">
+            Open the confirmation email and follow its link. You will return here to finish joining the workspace.
+          </p>
+        </div>
+      )}
+
+      {status === 'sign-in' && (
+        <div className="space-y-5">
+          <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <Mail className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+            <p className="text-sm leading-6 text-slate-600">
               {message || 'Please sign in with the email address that received this invitation.'}
             </p>
-            <button
-              onClick={goToSignIn}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold py-3 rounded-xl"
-            >
-              Sign In to Accept Invitation
-            </button>
-          </>
-        )}
+          </div>
 
-        {status === 'success' && (
-          <>
-            <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto my-6" />
-            <p className="text-zinc-300 mb-6">{message}</p>
-            <button
-              onClick={goToWorkspace}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold py-3 rounded-xl"
-            >
-              Open Workspace
-            </button>
-          </>
-        )}
+          <button
+            type="button"
+            onClick={goToSignIn}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-600/20"
+          >
+            Sign in to accept invitation
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-        {status === 'error' && (
-          <>
-            <AlertCircle className="w-10 h-10 text-rose-400 mx-auto my-6" />
-            <p className="text-rose-300 mb-6">{message}</p>
-            <button
-              onClick={() => router.push('/signin')}
-              className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold py-3 rounded-xl"
-            >
-              Return to Sign In
-            </button>
-          </>
-        )}
-      </div>
-    </main>
+      {status === 'success' && (
+        <div className="space-y-5">
+          <div className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
+            <CheckCircle className="mt-0.5 h-6 w-6 shrink-0 text-emerald-700" />
+            <p className="text-sm leading-6 text-slate-700">
+              {message}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={goToWorkspace}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-600/20"
+          >
+            Open workspace
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {status === 'error' && (
+        <div className="space-y-5">
+          <div className="flex items-start gap-3 rounded-xl border border-rose-100 bg-rose-50 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+            <p className="text-sm leading-6 text-rose-700">
+              {message}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => router.push('/signin')}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200"
+          >
+            Return to sign in
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </AuthLayout>
   );
 }

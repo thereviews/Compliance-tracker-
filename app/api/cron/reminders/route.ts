@@ -331,7 +331,7 @@ export async function GET(req: Request) {
           process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
 
         const dashboardUrl = appUrl
-          ? `${appUrl.replace(/\/$/, '')}/dashboard/compliance-register?workspaceId=${encodeURIComponent(requirement.workspace_id)}`
+          ? `${appUrl.replace(/\/$/, '')}/dashboard?workspaceId=${encodeURIComponent(requirement.workspace_id)}&tab=register&requirementId=${encodeURIComponent(requirement.id)}`
           : null;
 
         const safeGreeting = escapeHtml(greeting);
@@ -584,7 +584,7 @@ export async function GET(req: Request) {
           process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
 
         const dashboardUrl = appUrl
-          ? `${appUrl.replace(/\/$/, '')}/dashboard/corrective-actions?workspaceId=${encodeURIComponent(action.workspace_id)}`
+          ? `${appUrl.replace(/\/$/, '')}/dashboard?workspaceId=${encodeURIComponent(action.workspace_id)}&tab=actions&actionId=${encodeURIComponent(action.id)}`
           : null;
 
         const safeGreeting = escapeHtml(greeting);

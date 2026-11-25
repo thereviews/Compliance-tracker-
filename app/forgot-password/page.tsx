@@ -58,7 +58,28 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthLayout>
-      {submitted ? (
+      {loading ? (
+        <div>
+          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+            <ArrowRight className="h-6 w-6 animate-pulse" />
+          </div>
+
+          <p className="mb-3 text-sm font-semibold text-emerald-700">
+            Account recovery
+          </p>
+
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">
+            Sending reset instructions
+          </h1>
+
+          <div className="mt-5 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-4">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-700 border-t-transparent" />
+            <p className="text-sm leading-6 text-slate-600">
+              Please wait while we send your password reset instructions.
+            </p>
+          </div>
+        </div>
+      ) : submitted ? (
         <div>
           <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
             <CheckCircle2 className="h-6 w-6" />

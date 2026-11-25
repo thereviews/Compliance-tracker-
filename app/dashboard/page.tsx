@@ -44,6 +44,8 @@ export default function Dashboard() {
   const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [requirements, setRequirements] = useState<any[]>([]);
+  const [deepLinkRequirementId, setDeepLinkRequirementId] = useState<string | null>(null);
+  const [deepLinkActionId, setDeepLinkActionId] = useState<string | null>(null);
   const [updatingRequirementId, setUpdatingRequirementId] = useState<string | null>(null);
   const [editingRequirementId, setEditingRequirementId] = useState<string | null>(null);
   const [creatingRequirement, setCreatingRequirement] = useState(false);
@@ -94,6 +96,7 @@ export default function Dashboard() {
   const workspaceDataRequest = useRef(0);
   const teamMembersRequest = useRef(0);
   const workspaceInitialization = useRef<Promise<void> | null>(null);
+  const deepLinkScrolled = useRef<string | null>(null);
   const workspaceDataCache = useRef(
     new Map<string, { data: any[]; cachedAt: number }>()
   );
@@ -153,6 +156,25 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (loading) return;
+
+    const targetId = deepLinkRequirementId
+      ? `requirement-${deepLinkRequirementId}`
+      : deepLinkActionId
+        ? `action-${deepLinkActionId}`
+        : null;
+
+    if (!targetId || deepLinkScrolled.current === targetId) return;
+
+    const target = document.getElementById(targetId);
+
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      deepLinkScrolled.current = targetId;
+    }
+  }, [loading, requirements, actions, activeTab, deepLinkRequirementId, deepLinkActionId]);
+
+  useEffect(() => {
     if ((activeTab === 'settings' || activeTab === 'actions' || activeTab === 'register') && workspace?.id) {
       loadTeamMembers(workspace.id);
     }
@@ -166,11 +188,38 @@ export default function Dashboard() {
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        router.push('/signin');
+        const nextPath = `${window.location.pathname}${window.location.search}`;
+        router.replace(`/signin?next=${encodeURIComponent(nextPath)}`);
         return;
       }
 
       setCurrentUserId(user.id);
+
+      const requestedParams = new URLSearchParams(window.location.search);
+      const requestedTab = requestedParams.get('tab');
+      const requestedRequirementId = requestedParams.get('requirementId');
+      const requestedActionId = requestedParams.get('actionId');
+
+      if (requestedTab === 'register' || requestedTab === 'actions') {
+        setActiveTab(requestedTab);
+      }
+
+      if (requestedRequirementId) {
+        setDeepLinkRequirementId(requestedRequirementId);
+        setRegisterSearch('');
+        setRegisterStatusFilter('all');
+        setRegisterPriorityFilter('all');
+        setRegisterSourceFilter('all');
+        setActiveTab('register');
+      }
+
+      if (requestedActionId) {
+        setDeepLinkActionId(requestedActionId);
+        setActionSearch('');
+        setActionStatusFilter('all');
+        setActionAssignmentFilter('all');
+        setActiveTab('actions');
+      }
 
       const metadataName =
         user.user_metadata?.full_name ?? user.user_metadata?.name;
@@ -877,7 +926,7 @@ export default function Dashboard() {
       return;
     }
 
-    if (!actionDueDate || !/^\\d{4}-\\d{2}-\\d{2}$/.test(actionDueDate)) {
+    if (!actionDueDate || !/^\d{4}-\d{2}-\d{2}$/.test(actionDueDate)) {
       toast.error('An action due date is required.');
       return;
     }
@@ -1123,7 +1172,7 @@ export default function Dashboard() {
       return;
     }
 
-    if (!requirementDeadline || !/^\\d{4}-\\d{2}-\\d{2}$/.test(requirementDeadline)) {
+    if (!requirementDeadline || !/^\d{4}-\d{2}-\d{2}$/.test(requirementDeadline)) {
       toast.error('A valid requirement deadline is required.');
       return;
     }
@@ -2793,7 +2842,15 @@ export default function Dashboard() {
                           status !== 'Compliant';
 
                         return (
-                          <tr key={req.id} className="transition-colors hover:bg-slate-50">
+                          <tr
+                            key={req.id}
+                            id={`requirement-${req.id}`}
+                            className={`transition-colors ${
+                              deepLinkRequirementId === req.id
+                                ? 'bg-amber-100 ring-2 ring-inset ring-amber-400'
+                                : 'hover:bg-slate-50'
+                            }`}
+                          >
                             <td className="max-w-[280px] px-5 py-4">
                               <p className="font-semibold text-slate-900">{req.title || 'Untitled requirement'}</p>
                               {req.description && (
@@ -3456,7 +3513,15 @@ export default function Dashboard() {
                           act.due_date < actionTodayString;
 
                         return (
-                          <tr key={act.id} className="transition hover:bg-slate-50/80">
+                          <tr
+                            key={act.id}
+                            id={`action-${act.id}`}
+                            className={`transition ${
+                              deepLinkActionId === act.id
+                                ? 'bg-amber-100 ring-2 ring-inset ring-amber-400'
+                                : 'hover:bg-slate-50/80'
+                            }`}
+                          >
                             <td className="px-5 py-4">
                               <div className="font-semibold text-slate-900">{act.title}</div>
                               {act.description && (
