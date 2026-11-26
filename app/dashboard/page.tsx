@@ -97,6 +97,7 @@ export default function Dashboard() {
   const teamMembersRequest = useRef(0);
   const workspaceInitialization = useRef<Promise<void> | null>(null);
   const deepLinkScrolled = useRef<string | null>(null);
+  const deepLinkHighlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const workspaceDataCache = useRef(
     new Map<string, { data: any[]; cachedAt: number }>()
   );
@@ -171,8 +172,26 @@ export default function Dashboard() {
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       deepLinkScrolled.current = targetId;
+
+      if (deepLinkHighlightTimer.current) {
+        clearTimeout(deepLinkHighlightTimer.current);
+      }
+
+      deepLinkHighlightTimer.current = setTimeout(() => {
+        setDeepLinkRequirementId(null);
+        setDeepLinkActionId(null);
+        deepLinkHighlightTimer.current = null;
+      }, 4000);
     }
   }, [loading, requirements, actions, activeTab, deepLinkRequirementId, deepLinkActionId]);
+
+  useEffect(() => {
+    return () => {
+      if (deepLinkHighlightTimer.current) {
+        clearTimeout(deepLinkHighlightTimer.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if ((activeTab === 'settings' || activeTab === 'actions' || activeTab === 'register') && workspace?.id) {
@@ -2845,9 +2864,9 @@ export default function Dashboard() {
                           <tr
                             key={req.id}
                             id={`requirement-${req.id}`}
-                            className={`transition-colors ${
+                            className={`transition-colors duration-700 ${
                               deepLinkRequirementId === req.id
-                                ? 'bg-amber-100 ring-2 ring-inset ring-amber-400'
+                                ? 'bg-[#edf7f1] shadow-[inset_4px_0_0_#398263] ring-1 ring-inset ring-[#398263]/20'
                                 : 'hover:bg-slate-50'
                             }`}
                           >
@@ -3516,9 +3535,9 @@ export default function Dashboard() {
                           <tr
                             key={act.id}
                             id={`action-${act.id}`}
-                            className={`transition ${
+                            className={`transition-colors duration-700 ${
                               deepLinkActionId === act.id
-                                ? 'bg-amber-100 ring-2 ring-inset ring-amber-400'
+                                ? 'bg-[#edf7f1] shadow-[inset_4px_0_0_#398263] ring-1 ring-inset ring-[#398263]/20'
                                 : 'hover:bg-slate-50/80'
                             }`}
                           >
