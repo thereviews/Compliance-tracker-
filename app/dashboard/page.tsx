@@ -201,14 +201,28 @@ export default function Dashboard() {
 
   const initWorkspace = async () => {
     try {
+      const nextPath = `${window.location.pathname}${window.location.search}`;
+      const redirectToSignIn = () => {
+        router.replace(`/signin?next=${encodeURIComponent(nextPath)}`);
+      };
+
+      const {
+        data: { session },
+        error: sessionError
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        redirectToSignIn();
+        return;
+      }
+
       const {
         data: { user },
         error: userError
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        const nextPath = `${window.location.pathname}${window.location.search}`;
-        router.replace(`/signin?next=${encodeURIComponent(nextPath)}`);
+        redirectToSignIn();
         return;
       }
 
