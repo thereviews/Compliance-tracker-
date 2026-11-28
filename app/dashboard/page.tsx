@@ -83,6 +83,7 @@ export default function Dashboard() {
   const [inviting, setInviting] = useState(false);
   const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [memberRemovalConfirmation, setMemberRemovalConfirmation] = useState<any>(null);
   const [requirements, setRequirements] = useState<any[]>([]);
   const [deepLinkRequirementId, setDeepLinkRequirementId] = useState<string | null>(null);
   const [deepLinkActionId, setDeepLinkActionId] = useState<string | null>(null);
@@ -787,7 +788,7 @@ export default function Dashboard() {
     }
   };
 
-  const removeWorkspaceMember = async (member: any) => {
+  const removeWorkspaceMember = (member: any) => {
     if (!workspace?.id || !['Owner', 'Admin'].includes(workspace.role)) {
       toast.error('You do not have permission to remove members.');
       return;
@@ -803,11 +804,15 @@ export default function Dashboard() {
       return;
     }
 
-    const memberName = member.name || member.email || 'this member';
-    if (!window.confirm(`Remove ${memberName} from this workspace? They will lose access to its records and documents.`)) {
-      return;
-    }
+    setMemberRemovalConfirmation(member);
+  };
 
+  const confirmRemoveWorkspaceMember = async () => {
+    const member = memberRemovalConfirmation;
+
+    if (!member || !workspace?.id) return;
+
+    const memberName = member.name || member.email || 'This member';
     setRemovingMemberId(member.userId);
 
     try {
@@ -831,6 +836,7 @@ export default function Dashboard() {
         throw new Error(result.details || result.error || 'Could not remove workspace member.');
       }
 
+      setMemberRemovalConfirmation(null);
       toast.success(`${memberName} was removed from the workspace.`);
       await loadTeamMembers(workspace.id);
     } catch (error: any) {
@@ -4734,6 +4740,54 @@ export default function Dashboard() {
         )}
 
       </main>
+
+      {memberRemovalConfirmation && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/50 px-4 py-6">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="member-removal-title"
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+          >
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 id="member-removal-title" className="text-lg font-semibold text-slate-900">
+                    Remove team member?
+                  </h2>
+                  <p className="mt-1 break-words text-sm font-semibold text-slate-800">
+                    {memberRemovalConfirmation.name || memberRemovalConfirmation.email || 'This member'}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                    This person will lose access to this workspace, including its compliance records and documents. This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setMemberRemovalConfirmation(null)}
+                disabled={removingMemberId !== null}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmRemoveWorkspaceMember()}
+                disabled={removingMemberId !== null}
+                className="rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {removingMemberId !== null ? 'Removing...' : 'Remove member'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteConfirmation && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 px-4 py-6">
