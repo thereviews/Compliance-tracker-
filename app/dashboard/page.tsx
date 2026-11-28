@@ -17,7 +17,7 @@ const SkeletonBlock = ({ className = '' }: { className?: string }) => (
 
 export default function Dashboard() {
   const pathname = usePathname();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'register' | 'evidence' | 'actions' | 'reports' | 'settings' | 'account'>(
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'register' | 'evidence' | 'actions' | 'reports' | 'activity' | 'settings' | 'account'>(
     pathname === '/settings' ? 'account' : 'dashboard'
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,6 +38,46 @@ export default function Dashboard() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [teamLoading, setTeamLoading] = useState(false);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState('');
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityEventFilter, setActivityEventFilter] = useState('all');
+  const [activityEntityFilter, setActivityEntityFilter] = useState('all');
+  const [activityDateRange, setActivityDateRange] = useState('all');
+
+  const filteredActivityLogs = useMemo(() => {
+    const query = activitySearch.trim().toLowerCase();
+
+    return activityLogs.filter((log: any) => {
+      if (activityEventFilter !== 'all' && log.event_type !== activityEventFilter) {
+        return false;
+      }
+
+      if (activityEntityFilter !== 'all' && log.entity_type !== activityEntityFilter) {
+        return false;
+      }
+
+      if (activityDateRange !== 'all') {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - Number(activityDateRange));
+        if (new Date(log.created_at) < cutoff) return false;
+      }
+
+      if (query) {
+        const searchable = [
+          log.entity_type,
+          log.event_type,
+          log.actor_user_id,
+          JSON.stringify(log.details || {})
+        ].join(' ').toLowerCase();
+
+        if (!searchable.includes(query)) return false;
+      }
+
+      return true;
+    });
+  }, [activityLogs, activitySearch, activityEventFilter, activityEntityFilter, activityDateRange]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'Admin' | 'Member'>('Member');
   const [inviting, setInviting] = useState(false);
@@ -94,6 +134,8 @@ export default function Dashboard() {
 
   const router = useRouter();
   const workspaceDataRequest = useRef(0);
+  const subscriptionRequest = useRef(0);
+  const workspaceSubscription = useRef<any>(null);
   const teamMembersRequest = useRef(0);
   const workspaceInitialization = useRef<Promise<void> | null>(null);
   const deepLinkScrolled = useRef<string | null>(null);
@@ -139,6 +181,37 @@ export default function Dashboard() {
     sections.forEach((section) => {
       workspaceDataCache.current.delete(`${wsId}:${section}`);
     });
+  };
+
+  const loadWorkspaceSubscription = async (wsId: string) => {
+    const requestId = ++subscriptionRequest.current;
+    workspaceSubscription.current = null;
+
+    try {
+      const headers = await getAuthHeaders();
+
+      const response = await fetch(
+        `/api/subscription?workspaceId=${encodeURIComponent(wsId)}`,
+        { headers }
+      );
+
+      const result = await response.json();
+
+      if (requestId !== subscriptionRequest.current) return;
+
+      if (!response.ok || !result.success || !result.subscription) {
+        throw new Error(
+          result.error || 'Could not load workspace subscription.'
+        );
+      }
+
+      workspaceSubscription.current = result.subscription;
+    } catch (error) {
+      if (requestId !== subscriptionRequest.current) return;
+
+      workspaceSubscription.current = null;
+      console.error('Workspace subscription loading error:', error);
+    }
   };
 
   useEffect(() => {
@@ -194,9 +267,41 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if ((activeTab === 'settings' || activeTab === 'actions' || activeTab === 'register') && workspace?.id) {
+    if ((activeTab === 'settings' || activeTab === 'actions' || activeTab === 'register' || activeTab === 'activity') && workspace?.id) {
       loadTeamMembers(workspace.id);
     }
+  }, [activeTab, workspace?.id]);
+
+  useEffect(() => {
+    if (activeTab !== 'activity' || !workspace?.id) return;
+
+    let cancelled = false;
+
+    const loadActivity = async () => {
+      setActivityLoading(true);
+      setActivityError('');
+
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('id, actor_user_id, event_type, entity_type, entity_id, details, created_at')
+        .eq('workspace_id', workspace.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[ACTIVITY HISTORY LOAD ERROR]', error);
+        setActivityError('Could not load activity history. Please try again.');
+      } else {
+        setActivityLogs(data || []);
+      }
+
+      setActivityLoading(false);
+    };
+
+    void loadActivity();
+    return () => { cancelled = true; };
   }, [activeTab, workspace?.id]);
 
   const initWorkspace = async () => {
@@ -346,6 +451,7 @@ export default function Dashboard() {
         url.searchParams.set('workspaceId', selectedWorkspace.id);
         window.history.replaceState({}, '', url.toString());
 
+        loadWorkspaceSubscription(selectedWorkspace.id);
         loadWorkspaceData(selectedWorkspace.id);
         return;
       }
@@ -400,6 +506,7 @@ export default function Dashboard() {
       url.searchParams.set('workspaceId', newWorkspace.id);
       window.history.replaceState({}, '', url.toString());
 
+      loadWorkspaceSubscription(newWorkspace.id);
       loadWorkspaceData(newWorkspace.id);
     } catch (error) {
       console.error('Dashboard initialization error:', error);
@@ -428,11 +535,14 @@ export default function Dashboard() {
     setEvidence([]);
     setActions([]);
     setTeamMembers([]);
+    setActivityLogs([]);
+    setActivityError('');
 
     const url = new URL(window.location.href);
     url.searchParams.set('workspaceId', selectedWorkspace.id);
     window.history.replaceState({}, '', url.toString());
 
+    loadWorkspaceSubscription(selectedWorkspace.id);
     loadWorkspaceData(selectedWorkspace.id);
   };
 
@@ -1751,6 +1861,7 @@ export default function Dashboard() {
             { id: 'evidence', label: 'Documents & Evidence', icon: FileText },
             { id: 'actions', label: 'Actions', icon: Clock },
             { id: 'reports', label: 'Reports', icon: BarChart3 },
+            { id: 'activity', label: 'Activity History', icon: Activity },
             { id: 'settings', label: 'Workspace & Team', icon: Users },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1836,6 +1947,7 @@ export default function Dashboard() {
                   { id: 'evidence', label: 'Documents & Evidence' },
                   { id: 'actions', label: 'Actions' },
                   { id: 'reports', label: 'Reports' },
+                  { id: 'activity', label: 'Activity History' },
                   { id: 'settings', label: 'Workspace & Team' },
                   { id: 'account', label: 'Account settings' },
                 ].find((tab) => tab.id === activeTab)?.label}
@@ -4001,6 +4113,254 @@ export default function Dashboard() {
                 Audit readiness should be confirmed by reviewing the actual evidence and applicable obligations.
               </p>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="mx-auto max-w-5xl space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                Activity History
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                A record of changes made across this workspace.
+              </p>
+            </div>
+
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
+                <div>
+                  <h3 className="font-semibold text-slate-900">Recent activity</h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Showing the latest 100 recorded events.
+                  </p>
+                </div>
+                <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                  {activityLogs.length} events
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 border-b border-slate-100 bg-slate-50/70 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:px-6">
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <label htmlFor="activity-search" className="mb-1.5 block text-xs font-medium text-slate-600">
+                    Search activity
+                  </label>
+                  <input
+                    id="activity-search"
+                    type="search"
+                    value={activitySearch}
+                    onChange={(e) => setActivitySearch(e.target.value)}
+                    placeholder="Search names or changes..."
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="activity-event-filter" className="mb-1.5 block text-xs font-medium text-slate-600">
+                    Event
+                  </label>
+                  <select
+                    id="activity-event-filter"
+                    value={activityEventFilter}
+                    onChange={(e) => setActivityEventFilter(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  >
+                    <option value="all">All events</option>
+                    <option value="created">Created</option>
+                    <option value="updated">Updated</option>
+                    <option value="deleted">Deleted</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="activity-entity-filter" className="mb-1.5 block text-xs font-medium text-slate-600">
+                    Record type
+                  </label>
+                  <select
+                    id="activity-entity-filter"
+                    value={activityEntityFilter}
+                    onChange={(e) => setActivityEntityFilter(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  >
+                    <option value="all">All record types</option>
+                    <option value="compliance_requirements">Requirements</option>
+                    <option value="compliance_actions">Actions</option>
+                    <option value="compliance_evidence">Evidence</option>
+                    <option value="workspace_member">Team members</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="activity-date-filter" className="mb-1.5 block text-xs font-medium text-slate-600">
+                    Date range
+                  </label>
+                  <select
+                    id="activity-date-filter"
+                    value={activityDateRange}
+                    onChange={(e) => setActivityDateRange(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                  >
+                    <option value="all">All time</option>
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end sm:col-span-2 lg:col-span-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActivitySearch('');
+                      setActivityEventFilter('all');
+                      setActivityEntityFilter('all');
+                      setActivityDateRange('all');
+                    }}
+                    disabled={!activitySearch && activityEventFilter === 'all' && activityEntityFilter === 'all' && activityDateRange === 'all'}
+                    className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Clear filters
+                  </button>
+                  <span className="ml-auto pb-2 text-xs text-slate-500">
+                    {filteredActivityLogs.length} of {activityLogs.length} events
+                  </span>
+                </div>
+              </div>
+
+              {activityLoading ? (
+                <div className="space-y-4 p-5 sm:p-6">
+                  {[1, 2, 3, 4].map((item) => (
+                    <div key={item} className="flex gap-3">
+                      <SkeletonBlock className="h-9 w-9 shrink-0 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <SkeletonBlock className="h-4 w-48 max-w-full" />
+                        <SkeletonBlock className="h-3 w-64 max-w-full" />
+                        <SkeletonBlock className="h-3 w-32" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : activityError ? (
+                <div className="p-8 text-center">
+                  <p className="text-sm text-rose-600">{activityError}</p>
+                </div>
+              ) : filteredActivityLogs.length === 0 ? (
+                <div className="p-10 text-center">
+                  <Activity className="mx-auto h-9 w-9 text-slate-300" />
+                  <p className="mt-3 text-sm font-medium text-slate-700">
+                    {activityLogs.length === 0 ? 'No activity recorded yet' : 'No matching activity found'}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {activityLogs.length === 0 ? 'Changes to requirements, actions and evidence will appear here.' : 'Try changing your search or filters.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {filteredActivityLogs.map((log: any) => {
+                    const details = log.details || {};
+                    const titleChange = details.title || details.file_name;
+                    const recordName =
+                      titleChange?.to ?? titleChange?.from ?? null;
+
+                    const entityLabels: Record<string, string> = {
+                      compliance_requirements: 'Compliance requirement',
+                      compliance_actions: 'Action',
+                      compliance_evidence: 'Evidence',
+                      workspace_member: 'Workspace member'
+                    };
+
+                    const eventLabels: Record<string, string> = {
+                      created: 'Created',
+                      updated: 'Updated',
+                      deleted: 'Deleted'
+                    };
+
+                    const eventColors: Record<string, string> = {
+                      created: 'bg-emerald-50 text-emerald-700',
+                      updated: 'bg-blue-50 text-blue-700',
+                      deleted: 'bg-rose-50 text-rose-700'
+                    };
+
+                    const changes = Object.entries(details).map(
+                      ([field, change]: [string, any]) => {
+                        const value =
+                          log.event_type === 'created'
+                            ? change?.to
+                            : log.event_type === 'deleted'
+                              ? change?.from
+                              : `${change?.from ?? '—'} → ${change?.to ?? '—'}`;
+
+                        return {
+                          field: field.replace(/_/g, ' '),
+                          value:
+                            value === null || value === undefined
+                              ? '—'
+                              : String(value)
+                        };
+                      }
+                    );
+
+                    const actor = teamMembers.find(
+                      (member: any) => member.userId === log.actor_user_id
+                    );
+
+                    const actorLabel =
+                      log.actor_user_id === currentUserId
+                        ? 'You'
+                        : actor
+                          ? actor.name || actor.email || 'Workspace member'
+                          : log.actor_user_id
+                            ? 'Former or unavailable member'
+                            : 'System or database operation';
+
+                    return (
+                      <div key={log.id} className="flex gap-3 px-5 py-5 sm:px-6">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100">
+                          <Activity className="h-4 w-4 text-slate-500" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded-md px-2 py-1 text-[11px] font-semibold ${eventColors[log.event_type] || 'bg-slate-100 text-slate-600'}`}>
+                              {eventLabels[log.event_type] || log.event_type}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {entityLabels[log.entity_type] || 'Record'}
+                            </span>
+                          </div>
+
+                          <p className="mt-2 break-words text-sm font-semibold text-slate-900">
+                            {recordName || entityLabels[log.entity_type] || 'Workspace record'}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-500">
+{actorLabel}
+                            {' · '}
+                            {new Date(log.created_at).toLocaleString()}
+                          </p>
+
+                          {changes.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {changes.map((change, index) => (
+                                <span
+                                  key={`${log.id}-${index}`}
+                                  className="max-w-full break-words rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600"
+                                >
+                                  <span className="font-medium capitalize text-slate-700">
+                                    {change.field}:
+                                  </span>{' '}
+                                  {change.value}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
           </div>
         )}
 

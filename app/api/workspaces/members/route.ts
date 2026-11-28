@@ -239,6 +239,21 @@ export async function PATCH(req: Request) {
 
     if (updateError) throw new Error(updateError.message);
 
+    const { error: auditError } = await supabaseAdmin
+      .from('activity_logs')
+      .insert({
+        workspace_id: workspaceId,
+        actor_user_id: user.id,
+        event_type: 'updated',
+        entity_type: 'workspace_member',
+        entity_id: targetUserId,
+        details: { role: { from: target.role, to: role } }
+      });
+
+    if (auditError) {
+      console.error('[MEMBER ROLE AUDIT ERROR]', auditError);
+    }
+
     return NextResponse.json({
       success: true,
       userId: targetUserId,
@@ -368,6 +383,21 @@ export async function DELETE(req: Request) {
         { error: 'Workspace member could not be removed.' },
         { status: 404 }
       );
+    }
+
+    const { error: auditError } = await supabaseAdmin
+      .from('activity_logs')
+      .insert({
+        workspace_id: workspaceId,
+        actor_user_id: user.id,
+        event_type: 'deleted',
+        entity_type: 'workspace_member',
+        entity_id: targetUserId,
+        details: { role: { from: target.role } }
+      });
+
+    if (auditError) {
+      console.error('[MEMBER REMOVAL AUDIT ERROR]', auditError);
     }
 
     return NextResponse.json({

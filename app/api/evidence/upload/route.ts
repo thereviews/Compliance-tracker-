@@ -4,6 +4,82 @@ import { ai, complianceExtractionSchema } from '@/lib/gemini';
 
 export const runtime = 'nodejs';
 
+function isRetryableGeminiError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+
+  const details = error as {
+    status?: unknown;
+    code?: unknown;
+    message?: unknown;
+    name?: unknown;
+  };
+
+  const status = details.status;
+
+  if (
+    typeof status === 'number' &&
+    (status === 408 || status === 429 || status >= 500)
+  ) {
+    return true;
+  }
+
+  const code = typeof details.code === 'string'
+    ? details.code.toUpperCase()
+    : '';
+
+  const message = typeof details.message === 'string'
+    ? details.message
+    : '';
+
+  const name = typeof details.name === 'string'
+    ? details.name
+    : '';
+
+  return (
+    [
+      'ECONNRESET',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'EAI_AGAIN',
+      'ENOTFOUND',
+      'UND_ERR_CONNECT_TIMEOUT'
+    ].includes(code) ||
+    name === 'AbortError' ||
+    /timeout|timed out|fetch failed|socket hang up/i.test(message)
+  );
+}
+
+async function withGeminiRetries<T>(
+  operation: () => Promise<T>
+): Promise<T> {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === maxAttempts || !isRetryableGeminiError(error)) {
+        throw error;
+      }
+
+      const delayMs = attempt * 1000;
+
+      console.warn('[GEMINI RETRY]', {
+        attempt,
+        nextAttempt: attempt + 1,
+        maxAttempts,
+        delayMs,
+        error
+      });
+
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error('Gemini request failed after all retry attempts.');
+}
+
+
 export async function POST(req: Request) {
   const requestStartedAt = performance.now();
   let stageStartedAt = requestStartedAt;
@@ -300,7 +376,7 @@ export async function POST(req: Request) {
         };
 
     const geminiStartedAt = performance.now();
-    const response = await ai.models.generateContent({
+    const response = await withGeminiRetries(() => ai.models.generateContent({
       model: 'gemini-3.5-flash-lite',
       contents: [{
         role: 'user',
@@ -328,7 +404,7 @@ export async function POST(req: Request) {
         responseMimeType: 'application/json',
         responseSchema: complianceExtractionSchema
       }
-    });
+    }));
 
     geminiDurationMs = Math.round(performance.now() - geminiStartedAt);
 
